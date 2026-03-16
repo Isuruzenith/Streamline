@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>yt-Z</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="download">
+
+  <nav>
+    <a href="/" class="nav-logo">yt-Z</a>
+    <ul class="nav-links">
+      <li><a href="/queue">queue <span id="queue-badge" style="color:var(--accent);display:none"></span></a></li>
+      <li><a href="/history">history</a></li>
+      <li><a href="/settings">settings</a></li>
+    </ul>
+  </nav>
+
+  <main class="page">
+
+    <!-- Download form -->
+    <form id="dl-form">
+      <input
+        type="url"
+        id="url-input"
+        placeholder="Paste a video URL…"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        autofocus
+      >
+      <p id="url-error" class="field-error"></p>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap">
+        <div>
+          <label for="fmt-select" style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Format</label>
+          <select id="fmt-select">
+            <option value="mp4">MP4</option>
+            <option value="mkv">MKV</option>
+            <option value="mp3">MP3</option>
+            <option value="m4a">M4A</option>
+            <option value="best">Best</option>
+          </select>
+        </div>
+        <div>
+          <label for="quality-select" style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Quality</label>
+          <select id="quality-select">
+            <option value="best">Best</option>
+            <option value="2160">4K</option>
+            <option value="1080">1080p</option>
+            <option value="720">720p</option>
+            <option value="480">480p</option>
+            <option value="audio">Audio only</option>
+          </select>
+        </div>
+        <div style="align-self:flex-end">
+          <button type="submit" id="submit-btn" class="btn">Download</button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Active queue section -->
+    <div id="queue-section" style="margin-top:40px">
+      <div id="queue-list"></div>
+    </div>
+
+  </main>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>

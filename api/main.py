@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import datetime
+import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Security
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Security, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
+from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .history import HistoryStore
@@ -113,3 +117,41 @@ async def get_download(job_id: str) -> DownloadJob:
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
+
+
+@app.get("/api/settings", dependencies=[Depends(_check_key)])
+async def get_settings() -> dict:
+    cookie_file = Path(settings.cookies_path) / "cookies.json"
+    cookie_updated = None
+    if cookie_file.exists():
+        mtime = cookie_file.stat().st_mtime
+        cookie_updated = datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
+    return {
+        "default_format": settings.default_format,
+        "download_path": settings.download_path,
+        "max_queue_size": settings.max_queue_size,
+        "cookies_status": "ok" if cookie_file.exists() else "missing",
+        "cookies_updated": cookie_updated,
+    }
+
+
+@app.post("/api/settings/cookies", dependencies=[Depends(_check_key)])
+async def upload_cookies(file: UploadFile = File(...)) -> dict:
+    content = await file.read()
+    try:
+        json.loads(content)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=422, detail="File must be valid JSON")
+    cookie_dir = Path(settings.cookies_path)
+    cookie_dir.mkdir(parents=True, exist_ok=True)
+    (cookie_dir / "cookies.json").write_bytes(content)
+    return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Static frontend — mount LAST so API routes take priority
+# ---------------------------------------------------------------------------
+
+_FRONTEND = Path(__file__).parent.parent / "frontend"
+if _FRONTEND.exists():
+    app.mount("/", StaticFiles(directory=str(_FRONTEND), html=True), name="frontend")

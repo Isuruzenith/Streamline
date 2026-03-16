@@ -1,0 +1,280 @@
+/* Design tokens */
+:root {
+  --base:    #0f0f0f;
+  --surface: #1a1a1a;
+  --border:  #2a2a2a;
+  --primary: #f0f0f0;
+  --muted:   #6b6b6b;
+  --accent:  #e8ff47;
+  --danger:  #ff4d4d;
+  --success: #4dff91;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--base);
+  color: var(--primary);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--base); }
+::-webkit-scrollbar-thumb { background: var(--border); }
+
+/* Focus */
+*:focus-visible {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Inputs */
+input[type="text"],
+input[type="url"],
+select,
+textarea {
+  background: var(--surface);
+  color: var(--primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--muted);
+}
+
+input::placeholder { color: var(--muted); }
+
+/* Select — hide native arrow, add custom */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6b6b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  cursor: pointer;
+  width: auto;
+  min-width: 110px;
+}
+
+/* Buttons */
+.btn {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  padding: 10px 28px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 0;
+  transition: opacity 0.15s;
+  display: inline-block;
+}
+
+.btn:hover  { opacity: 0.85; }
+.btn:active { opacity: 0.7; }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+.btn-ghost:hover { color: var(--primary); border-color: var(--muted); }
+
+/* Progress bar */
+.progress-track {
+  height: 3px;
+  background: var(--border);
+  border-radius: 0;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.6s ease;
+}
+
+/* Nav */
+nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-logo {
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--primary);
+  text-decoration: none;
+  letter-spacing: -0.02em;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.15s;
+}
+
+.nav-links a:hover,
+.nav-links a.active { color: var(--primary); }
+
+/* Page */
+.page { max-width: 680px; margin: 0 auto; padding: 40px 24px 80px; }
+
+/* Section divider */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 32px 0;
+}
+
+/* Inline error / hint text */
+.field-error { color: var(--danger); font-size: 13px; margin-top: 6px; display: none; }
+.field-error.visible { display: block; }
+
+/* Status text colors */
+.status-queued    { color: var(--muted); }
+.status-running   { color: var(--accent); }
+.status-done      { color: var(--success); }
+.status-failed    { color: var(--danger); }
+.status-cancelled { color: var(--muted); }
+
+/* Job row */
+.job-row {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.job-row:last-child { border-bottom: none; }
+
+.job-title {
+  font-size: 14px;
+  color: var(--primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.job-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* History table */
+.hist-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.hist-table th {
+  text-align: left;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 0 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.hist-table td {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--primary);
+  vertical-align: middle;
+}
+.hist-table tr:last-child td { border-bottom: none; }
+.hist-table td.muted { color: var(--muted); font-size: 13px; }
+
+/* Settings sections */
+.setting-block { margin-bottom: 32px; }
+.setting-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+  display: block;
+}
+.setting-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0 0 16px 0;
+}
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: 60px 0;
+  color: var(--muted);
+}
+
+/* Upload zone */
+.upload-zone {
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  padding: 28px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 14px;
+  transition: border-color 0.15s;
+}
+.upload-zone:hover,
+.upload-zone.drag-over { border-color: var(--muted); color: var(--primary); }
+
+/* Page heading */
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: var(--primary);
+}
+.page-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 28px 0;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 28px;
+}
+.breadcrumb a { color: var(--muted); text-decoration: none; }
+.breadcrumb a:hover { color: var(--primary); }
