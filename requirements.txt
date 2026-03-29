@@ -10,3 +10,8 @@ python-multipart>=0.0.9
 pydantic-settings>=2.0.0
 aiofiles>=23.0.0
 email-validator>=2.0.0
+
+# Streamlit UI
+streamlit>=1.35.0
+streamlit-shadcn-ui>=0.1.18
+requests>=2.31.0
