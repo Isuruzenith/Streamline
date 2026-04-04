@@ -30,36 +30,43 @@ def inject_design_system():
     :root {
       --background:             0 0% 3.9%;
       --foreground:             0 0% 98%;
-      --card:                   0 0% 3.9%;
+      --card:                   0 0% 6.5%;
       --card-foreground:        0 0% 98%;
-      --popover:                0 0% 3.9%;
+      --popover:                0 0% 6.5%;
       --popover-foreground:     0 0% 98%;
       --primary:                0 0% 98%;
       --primary-foreground:     0 0% 9%;
-      --secondary:              0 0% 14.9%;
+      --secondary:              0 0% 12%;
       --secondary-foreground:   0 0% 98%;
       --muted:                  0 0% 14.9%;
       --muted-foreground:       0 0% 63.9%;
-      --accent:                 0 0% 14.9%;
+      --accent:                 0 0% 17%;
       --accent-foreground:      0 0% 98%;
       --destructive:            0 62.8% 30.6%;
       --destructive-foreground: 0 0% 98%;
       --border:                 0 0% 14.9%;
-      --input:                  0 0% 14.9%;
+      --input:                  0 0% 10%;
       --ring:                   0 0% 83.1%;
       --radius:                 0.5rem;
+      --card-elevated:          0 0% 8.5%;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
     }
 
     html, body, [class*="css"] {
       font-family: 'Geist', -apple-system, sans-serif !important;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
     .stApp {
       background-color: hsl(var(--background));
       color: hsl(var(--foreground));
     }
     .main .block-container {
-      padding: 0 1.5rem 2rem 1.5rem;
+      padding: 0 2rem 2.5rem 2rem;
       max-width: 1100px;
     }
     header[data-testid="stHeader"] {
@@ -67,6 +74,7 @@ def inject_design_system():
       border-bottom: 1px solid hsl(var(--border));
     }
 
+    /* ── Input fields ── */
     .stTextInput > div > div > input,
     .stTextArea > div > div > textarea,
     .stNumberInput > div > div > input {
@@ -76,18 +84,23 @@ def inject_design_system():
       color: hsl(var(--foreground)) !important;
       font-family: 'Geist', sans-serif !important;
       font-size: 0.875rem !important;
-      height: 36px;
+      height: 38px;
       padding: 0 0.75rem !important;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    .stTextArea > div > div > textarea { height: auto; padding: 0.5rem 0.75rem !important; }
+    .stTextArea > div > div > textarea {
+      height: auto;
+      padding: 0.5rem 0.75rem !important;
+    }
     .stTextInput > div > div > input:focus,
     .stTextArea > div > div > textarea:focus,
     .stNumberInput > div > div > input:focus {
       border-color: hsl(var(--ring)) !important;
-      box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2) !important;
+      box-shadow: 0 0 0 3px hsl(var(--ring) / 0.12) !important;
       outline: none !important;
     }
+
+    /* ── Labels ── */
     .stTextInput label, .stTextArea label, .stNumberInput label,
     .stSelectbox label, .stMultiSelect label, .stSlider label,
     .stDateInput label, .stFileUploader label, .stCheckbox label,
@@ -95,9 +108,10 @@ def inject_design_system():
       color: hsl(var(--muted-foreground)) !important;
       font-size: 0.75rem !important;
       font-weight: 500 !important;
-      letter-spacing: 0.025em !important;
+      letter-spacing: 0.03em !important;
     }
 
+    /* ── Select / Multiselect ── */
     .stSelectbox > div > div,
     .stMultiSelect > div > div {
       background-color: hsl(var(--input)) !important;
@@ -105,29 +119,38 @@ def inject_design_system():
       border-radius: var(--radius) !important;
       color: hsl(var(--foreground)) !important;
       font-size: 0.875rem !important;
-      min-height: 36px !important;
+      min-height: 38px !important;
+      transition: border-color 0.2s ease !important;
     }
     .stSelectbox > div > div:focus-within,
     .stMultiSelect > div > div:focus-within {
       border-color: hsl(var(--ring)) !important;
+      box-shadow: 0 0 0 3px hsl(var(--ring) / 0.12) !important;
     }
 
+    /* ── Buttons ── */
     .stButton > button {
       font-family: 'Geist', sans-serif !important;
       font-size: 0.875rem !important;
       font-weight: 500 !important;
-      height: 36px;
-      padding: 0 1rem !important;
+      height: 38px;
+      padding: 0 1.25rem !important;
       border-radius: var(--radius) !important;
-      transition: opacity 0.15s, background-color 0.15s !important;
+      transition: all 0.15s ease !important;
       cursor: pointer;
+      letter-spacing: 0.01em;
     }
     .stButton > button[kind="primary"] {
       background-color: hsl(var(--primary)) !important;
       color: hsl(var(--primary-foreground)) !important;
       border: none !important;
+      font-weight: 600 !important;
     }
-    .stButton > button[kind="primary"]:hover { opacity: 0.9 !important; }
+    .stButton > button[kind="primary"]:hover {
+      opacity: 0.9 !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px hsl(var(--primary) / 0.15) !important;
+    }
     .stButton > button[kind="secondary"],
     .stButton > button:not([kind]) {
       background-color: hsl(var(--secondary)) !important;
@@ -137,8 +160,10 @@ def inject_design_system():
     .stButton > button[kind="secondary"]:hover,
     .stButton > button:not([kind]):hover {
       background-color: hsl(var(--accent)) !important;
+      border-color: hsl(0 0% 22%) !important;
     }
 
+    /* ── Tabs ── */
     [data-baseweb="tab-list"] {
       background: transparent !important;
       border-bottom: 1px solid hsl(var(--border)) !important;
@@ -150,16 +175,22 @@ def inject_design_system():
       font-family: 'Geist', sans-serif !important;
       font-size: 0.875rem !important;
       font-weight: 500 !important;
-      padding: 0.625rem 1rem !important;
+      padding: 0.75rem 1.125rem !important;
       border-bottom: 2px solid transparent !important;
-      transition: color 0.15s, border-color 0.15s !important;
+      transition: color 0.2s ease, border-color 0.2s ease !important;
     }
-    [data-baseweb="tab"]:hover { color: hsl(var(--foreground)) !important; }
+    [data-baseweb="tab"]:hover {
+      color: hsl(var(--foreground)) !important;
+    }
     [aria-selected="true"][data-baseweb="tab"] {
       color: hsl(var(--foreground)) !important;
       border-bottom-color: hsl(var(--foreground)) !important;
     }
+    [data-baseweb="tab-highlight"] {
+      background-color: hsl(var(--foreground)) !important;
+    }
 
+    /* ── Expanders / Accordions ── */
     .streamlit-expanderHeader {
       background-color: hsl(var(--card)) !important;
       border: 1px solid hsl(var(--border)) !important;
@@ -168,45 +199,71 @@ def inject_design_system():
       font-family: 'Geist', sans-serif !important;
       font-size: 0.875rem !important;
       font-weight: 500 !important;
-      padding: 0.625rem 1rem !important;
+      padding: 0.75rem 1rem !important;
+      transition: background-color 0.15s ease, border-color 0.15s ease !important;
+    }
+    .streamlit-expanderHeader:hover {
+      background-color: hsl(var(--card-elevated)) !important;
+      border-color: hsl(0 0% 20%) !important;
     }
     .streamlit-expanderContent {
       border: 1px solid hsl(var(--border)) !important;
       border-top: none !important;
       border-radius: 0 0 var(--radius) var(--radius) !important;
       background-color: hsl(var(--card)) !important;
-      padding: 1rem !important;
+      padding: 1.25rem !important;
     }
 
+    /* ── Progress bars ── */
     .stProgress > div > div {
       background-color: hsl(var(--secondary)) !important;
       border-radius: 9999px !important;
-      height: 6px !important;
+      height: 5px !important;
+      overflow: hidden;
     }
     .stProgress > div > div > div {
-      background-color: hsl(var(--foreground)) !important;
+      background: linear-gradient(90deg, hsl(var(--foreground)), hsl(0 0% 80%), hsl(var(--foreground))) !important;
+      background-size: 200% 100%;
       border-radius: 9999px !important;
+      animation: shimmer 2s linear infinite;
     }
 
-    .stCheckbox > label > div:first-child { border-radius: calc(var(--radius) / 2) !important; }
+    /* ── Checkboxes ── */
+    .stCheckbox > label > div:first-child {
+      border-radius: calc(var(--radius) / 2) !important;
+    }
+
+    /* ── Alerts ── */
     .stAlert {
       border-radius: var(--radius) !important;
       border-width: 1px !important;
       font-size: 0.875rem !important;
     }
-    .stDataFrame { border: 1px solid hsl(var(--border)) !important; border-radius: var(--radius) !important; }
 
+    /* ── DataFrames ── */
+    .stDataFrame {
+      border: 1px solid hsl(var(--border)) !important;
+      border-radius: var(--radius) !important;
+    }
+
+    /* ── Scrollbar ── */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: hsl(var(--background)); }
     ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
 
+    /* ── File uploader ── */
     .stFileUploader > div {
       background-color: hsl(var(--card)) !important;
       border: 1px dashed hsl(var(--border)) !important;
       border-radius: var(--radius) !important;
+      transition: border-color 0.15s ease !important;
+    }
+    .stFileUploader > div:hover {
+      border-color: hsl(0 0% 25%) !important;
     }
 
+    /* ── Misc ── */
     hr { border-color: hsl(var(--border)) !important; margin: 1.5rem 0 !important; }
     code, .stCode {
       font-family: 'Geist Mono', monospace !important;
@@ -220,88 +277,239 @@ def inject_design_system():
       border: 1px solid hsl(var(--border)) !important;
       border-radius: var(--radius) !important;
     }
-
     .mono { font-family: 'Geist Mono', monospace !important; }
 
+    /* ── Metrics ── */
+    [data-testid="stMetricValue"] {
+      font-family: 'Geist', sans-serif !important;
+      font-size: 1.5rem !important;
+      font-weight: 700 !important;
+    }
+    [data-testid="stMetricLabel"] {
+      font-size: 0.6875rem !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.08em !important;
+      color: hsl(var(--muted-foreground)) !important;
+    }
+
+    /* ════════════════════════════════════════
+       Custom Streamline component classes
+       ════════════════════════════════════════ */
+
+    /* Cards */
     .sl-card {
       background-color: hsl(var(--card));
       border: 1px solid hsl(var(--border));
       border-radius: var(--radius);
       padding: 1rem 1.25rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
+    .sl-card:hover {
+      border-color: hsl(0 0% 22%);
+    }
+    .sl-card-elevated {
+      background-color: hsl(var(--card-elevated));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+    }
+
+    /* Badges */
     .sl-badge {
       display: inline-flex; align-items: center;
       border-radius: 9999px;
       font-family: 'Geist Mono', monospace;
       font-size: 0.6875rem; font-weight: 500;
-      padding: 0.125rem 0.625rem;
+      padding: 0.1875rem 0.625rem;
       letter-spacing: 0.04em;
       white-space: nowrap;
     }
     .sl-badge-default  { background: hsl(var(--secondary)); color: hsl(var(--secondary-foreground)); }
-    .sl-badge-success  { background: hsl(142 76% 10%); color: hsl(142 76% 60%); border: 1px solid hsl(142 76% 20%); }
-    .sl-badge-error    { background: hsl(var(--destructive) / 0.15); color: hsl(0 80% 65%); border: 1px solid hsl(var(--destructive)); }
-    .sl-badge-warning  { background: hsl(38 92% 10%); color: hsl(38 92% 60%); border: 1px solid hsl(38 92% 20%); }
+    .sl-badge-success  { background: hsl(142 76% 10%); color: hsl(142 71% 45%); border: 1px solid hsl(142 76% 18%); }
+    .sl-badge-error    { background: hsl(0 62% 15%); color: hsl(0 80% 65%); border: 1px solid hsl(0 62% 25%); }
+    .sl-badge-warning  { background: hsl(38 92% 10%); color: hsl(38 92% 55%); border: 1px solid hsl(38 92% 20%); }
     .sl-badge-running  { background: hsl(217 91% 10%); color: hsl(217 91% 65%); border: 1px solid hsl(217 91% 20%); }
+
+    /* Section headings */
     .sl-section {
       font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.1em;
       text-transform: uppercase; color: hsl(var(--muted-foreground));
       display: flex; align-items: center; gap: 0.75rem;
-      margin: 1.25rem 0 0.875rem 0;
+      margin: 1.5rem 0 1rem 0;
     }
     .sl-section::after {
-      content: ''; flex: 1; height: 1px; background: hsl(var(--border));
+      content: ''; flex: 1; height: 1px;
+      background: linear-gradient(90deg, hsl(var(--border)), transparent);
     }
+
+    /* Code preview */
     .sl-code-preview {
       font-family: 'Geist Mono', monospace; font-size: 0.78125rem;
       background: hsl(var(--card)); border: 1px solid hsl(var(--border));
-      border-radius: var(--radius); padding: 0.875rem 1rem;
-      color: hsl(var(--muted-foreground)); line-height: 1.6;
+      border-radius: var(--radius); padding: 1rem 1.125rem;
+      color: hsl(var(--muted-foreground)); line-height: 1.7;
       white-space: pre-wrap; word-break: break-all;
+      position: relative;
     }
     .sl-code-preview .hl { color: hsl(var(--foreground)); }
+
+    /* Job cards */
     .sl-job-card {
       background: hsl(var(--card)); border: 1px solid hsl(var(--border));
       border-radius: var(--radius); padding: 1rem 1.25rem;
-      margin-bottom: 0.625rem;
-      transition: border-color 0.15s;
+      margin-bottom: 0.75rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    .sl-job-card:hover { border-color: hsl(var(--ring) / 0.5); }
+    .sl-job-card:hover {
+      border-color: hsl(0 0% 22%);
+      box-shadow: 0 2px 8px hsl(0 0% 0% / 0.3);
+    }
     .sl-job-title {
       font-size: 0.9375rem; font-weight: 600;
       color: hsl(var(--foreground));
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      margin-bottom: 0.25rem;
+      margin-bottom: 0.375rem;
     }
     .sl-job-meta {
       font-family: 'Geist Mono', monospace;
       font-size: 0.6875rem; color: hsl(var(--muted-foreground));
-      display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;
+      display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;
       margin-bottom: 0.625rem;
     }
     .sl-progress-detail {
       font-family: 'Geist Mono', monospace;
       font-size: 0.6875rem; color: hsl(var(--muted-foreground));
-      margin-top: 0.375rem;
-      display: flex; gap: 1.25rem;
+      margin-top: 0.5rem;
+      display: flex; gap: 1.5rem; align-items: center;
     }
+    .sl-progress-detail span {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+    }
+
+    /* Wordmark */
     .sl-wordmark {
       font-family: 'Geist', sans-serif;
       font-size: 1.25rem; font-weight: 700;
-      letter-spacing: -0.025em;
+      letter-spacing: -0.03em;
       color: hsl(var(--foreground));
     }
+
+    /* Empty states */
     .sl-empty-state {
-      text-align: center; padding: 3rem 1rem;
+      text-align: center; padding: 4rem 1rem;
       color: hsl(var(--muted-foreground));
     }
-    .sl-empty-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .sl-empty-icon {
+      font-size: 2.5rem; margin-bottom: 0.75rem;
+      opacity: 0.5;
+    }
     .sl-empty-title {
-      font-size: 0.875rem; font-weight: 600;
-      letter-spacing: 0.025em; margin-bottom: 0.25rem;
+      font-size: 0.9375rem; font-weight: 600;
+      letter-spacing: 0.015em; margin-bottom: 0.375rem;
       color: hsl(var(--muted-foreground));
     }
-    .sl-empty-sub { font-size: 0.75rem; color: hsl(var(--border)); }
+    .sl-empty-sub {
+      font-size: 0.8125rem;
+      color: hsl(0 0% 35%);
+    }
+
+    /* Auth page */
+    .sl-auth-wrap {
+      display: flex; justify-content: center; align-items: center;
+      min-height: 65vh; padding: 2rem 0;
+    }
+    .sl-auth-card {
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
+      border-radius: calc(var(--radius) * 1.5);
+      padding: 2.5rem 2rem 2rem;
+      max-width: 400px; width: 100%;
+      box-shadow: 0 0 80px hsl(0 0% 100% / 0.015),
+                  0 8px 32px hsl(0 0% 0% / 0.4);
+    }
+    .sl-auth-title {
+      font-family: 'Geist', sans-serif;
+      font-size: 1.75rem; font-weight: 700;
+      letter-spacing: -0.03em;
+      color: hsl(var(--foreground));
+      margin-bottom: 0.25rem;
+    }
+    .sl-auth-subtitle {
+      font-size: 0.875rem;
+      color: hsl(var(--muted-foreground));
+      margin-bottom: 1.75rem;
+    }
+
+    /* Preview card */
+    .sl-preview-card {
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      display: flex; gap: 1.25rem; align-items: flex-start;
+    }
+    .sl-preview-thumb {
+      width: 180px; min-width: 180px; border-radius: calc(var(--radius) * 0.75);
+      overflow: hidden; aspect-ratio: 16/9; background: hsl(var(--secondary));
+    }
+    .sl-preview-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .sl-preview-info { flex: 1; min-width: 0; }
+    .sl-preview-title {
+      font-size: 1rem; font-weight: 600; color: hsl(var(--foreground));
+      margin-bottom: 0.375rem;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sl-preview-meta {
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.75rem; color: hsl(var(--muted-foreground));
+      margin-bottom: 0.75rem;
+    }
+
+    /* Nav bar user info */
+    .sl-nav-user {
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.6875rem; color: hsl(var(--muted-foreground));
+      padding: 0.375rem 0;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .sl-nav-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      display: inline-block;
+    }
+    .sl-nav-dot-live { background: hsl(142 71% 45%); }
+    .sl-nav-dot-demo { background: hsl(38 92% 55%); }
+
+    /* Settings section cards */
+    .sl-settings-card {
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .sl-settings-card h4 {
+      font-size: 0.875rem; font-weight: 600;
+      color: hsl(var(--foreground));
+      margin: 0 0 0.75rem 0;
+    }
+
+    /* Version info */
+    .sl-version-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.8125rem; padding: 0.375rem 0;
+      color: hsl(var(--foreground));
+    }
+    .sl-version-ok { color: hsl(142 71% 45%); }
+    .sl-version-missing { color: hsl(0 80% 55%); }
+
+    /* Pagination */
+    .sl-pagination {
+      display: flex; justify-content: center; align-items: center;
+      gap: 0.75rem; padding: 1rem 0;
+      font-family: 'Geist', sans-serif;
+      font-size: 0.8125rem; color: hsl(var(--muted-foreground));
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -768,22 +976,22 @@ def build_command_preview(opts: dict, url: str) -> str:
 
 
 def render_auth():
-    _, col, _ = st.columns([1, 1.2, 1])
+    st.markdown('<div class="sl-auth-wrap">', unsafe_allow_html=True)
+    _, col, _ = st.columns([1.2, 1, 1.2])
     with col:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        st.markdown(f'{wordmark()}', unsafe_allow_html=True)
         st.markdown(
-            '<p style="color:hsl(var(--muted-foreground));font-size:0.875rem;margin:0.25rem 0 1.5rem">Personal video downloader</p>',
-            unsafe_allow_html=True
+            '<div class="sl-auth-title">Streamline</div>'
+            '<div class="sl-auth-subtitle">Personal video downloader</div>',
+            unsafe_allow_html=True,
         )
 
         tab = st.tabs(["Sign in", "Register"])
 
         with tab[0]:
-            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
             email = st.text_input("Email", placeholder="you@example.com", key="auth_email_login")
             password = st.text_input("Password", type="password", placeholder="Password", key="auth_pw_login")
-            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown('<div style="height:0.25rem"></div>', unsafe_allow_html=True)
             if st.button("Sign in →", key="login_btn", use_container_width=True, type="primary"):
                 if email and password:
                     with st.spinner(""):
@@ -796,10 +1004,10 @@ def render_auth():
                         st.rerun()
 
         with tab[1]:
-            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
             email = st.text_input("Email", placeholder="you@example.com", key="auth_email_reg")
             password = st.text_input("Password", type="password", placeholder="Choose a password", key="auth_pw_reg")
-            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown('<div style="height:0.25rem"></div>', unsafe_allow_html=True)
             if st.button("Create account →", key="reg_btn", use_container_width=True, type="primary"):
                 if email and password:
                     with st.spinner(""):
@@ -812,17 +1020,22 @@ def render_auth():
                         st.rerun()
 
         st.markdown(
-            '<p style="font-size:0.75rem;color:hsl(var(--border));margin-top:1.5rem;text-align:center">Backend offline? Use any credentials — demo mode.</p>',
-            unsafe_allow_html=True
+            '<p style="font-size:0.75rem;color:hsl(0 0% 30%);margin-top:1.5rem;text-align:center">'
+            'Backend offline? Use any credentials — demo mode.</p>',
+            unsafe_allow_html=True,
         )
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def render_app():
-    c1, c2, c3 = st.columns([2, 6, 2])
+    c1, c2, c3 = st.columns([2.5, 5, 2.5])
     with c1:
-        st.markdown(f'<div style="padding:1rem 0 0.5rem">{wordmark()}</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div style="padding:0.875rem 0 0.5rem">{wordmark()}</div>',
+            unsafe_allow_html=True,
+        )
     with c3:
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div style="height:0.75rem"></div>', unsafe_allow_html=True)
         if st.button("Sign out", key="logout_btn"):
             for k in ["token", "email", "jobs", "preview_info", "cookie_status", "dl_opts", "format_data"]:
                 st.session_state.pop(k, None)
@@ -830,12 +1043,16 @@ def render_app():
 
     if st.session_state.email:
         mode = "demo" if st.session_state.token == "demo-token" else "live"
+        dot_cls = "sl-nav-dot-demo" if mode == "demo" else "sl-nav-dot-live"
         st.markdown(
-            f'<div style="font-family:\'Geist Mono\',monospace;font-size:0.6875rem;color:hsl(var(--muted-foreground));padding-bottom:0.5rem">● {st.session_state.email} <span style="opacity:0.5">· {mode} mode</span></div>',
-            unsafe_allow_html=True
+            f'<div class="sl-nav-user">'
+            f'<span class="sl-nav-dot {dot_cls}"></span>'
+            f'{st.session_state.email}'
+            f'<span style="opacity:0.4">·</span>'
+            f'<span style="opacity:0.4">{mode}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
         )
-
-    st.markdown("<hr>", unsafe_allow_html=True)
 
     active_count = len([j for j in st.session_state.jobs.values() if j.get("status") in ("queued", "running")])
     queue_label = f"Queue ({active_count})" if active_count else "Queue"
@@ -861,7 +1078,7 @@ def render_download_tab():
 
     url = st.text_input(
         "URL",
-        placeholder="https://youtube.com/watch?v=  or playlist URL…",
+        placeholder="https://youtube.com/watch?v=...  or paste a playlist URL",
         key="dl_url",
         value=opts.get("url", ""),
     )
@@ -887,13 +1104,13 @@ def render_download_tab():
         )
         opts["quality"] = quality
     with col3:
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
         playlist = st.checkbox("Playlist mode", value=opts.get("playlist", False), key="playlist_toggle")
         opts["playlist"] = playlist
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<div style="height:0.25rem"></div>', unsafe_allow_html=True)
 
-    with st.expander("Section A: Format & Quality", expanded=True):
+    with st.expander("🎬 Format & Quality", expanded=True):
         c1, c2 = st.columns(2)
         with c1:
             opts["format_sort"] = st.text_input(
@@ -933,7 +1150,7 @@ def render_download_tab():
                 key="opt_check_formats",
             )
 
-    with st.expander("Section B: Post-Processing", expanded=False):
+    with st.expander("⚡ Post-Processing", expanded=False):
         c1, c2 = st.columns(2)
         with c1:
             opts["extract_audio"] = st.checkbox(
@@ -1012,7 +1229,7 @@ def render_download_tab():
                 key="opt_write_comments",
             )
 
-    with st.expander("Section C: Subtitles", expanded=False):
+    with st.expander("💬 Subtitles", expanded=False):
         c1, c2 = st.columns(2)
         with c1:
             opts["write_subs"] = st.checkbox(
@@ -1043,7 +1260,7 @@ def render_download_tab():
                 key="opt_convert_subs",
             )
 
-    with st.expander("Section D: Video Selection", expanded=False):
+    with st.expander("📋 Video Selection & Filters", expanded=False):
         c1, c2 = st.columns(2)
         with c1:
             opts["playlist_items"] = st.text_input(
@@ -1143,7 +1360,7 @@ def render_download_tab():
                 key="opt_age_limit",
             ) or None
 
-    with st.expander("Section E: Download Behaviour", expanded=False):
+    with st.expander("⚙ Download Behaviour", expanded=False):
         c1, c2 = st.columns(2)
         with c1:
             opts["rate_limit"] = st.text_input(
@@ -1237,7 +1454,7 @@ def render_download_tab():
                 key="opt_dl_args",
             ) or None
 
-    with st.expander("Section F: Network & Authentication", expanded=False):
+    with st.expander("🌐 Network & Authentication", expanded=False):
         c1, c2 = st.columns(2)
         with c1:
             opts["proxy_url"] = st.text_input(
@@ -1320,7 +1537,7 @@ def render_download_tab():
                 key="opt_prefer_insecure",
             )
 
-    with st.expander("Section G: SponsorBlock", expanded=False):
+    with st.expander("🛡 SponsorBlock", expanded=False):
         c1, c2 = st.columns(2)
         with c1:
             opts["sponsorblock"] = st.selectbox(
@@ -1348,7 +1565,7 @@ def render_download_tab():
                 key="opt_sb_chapter",
             ) or None
 
-    with st.expander("Section H: Output Template", expanded=False):
+    with st.expander("📁 Output Template", expanded=False):
         c1, c2 = st.columns(2)
         with c1:
             opts["outtmpl"] = st.text_input(
@@ -1405,7 +1622,7 @@ def render_download_tab():
             | `%(view_count)s` | View count |
             """)
 
-    with st.expander("Section I: Extractor Options", expanded=False):
+    with st.expander("🔧 Extractor Options", expanded=False):
         c1, c2 = st.columns(2)
         with c1:
             opts["extract_flat"] = st.selectbox(
@@ -1422,13 +1639,7 @@ def render_download_tab():
                 key="opt_extractor_args",
             )
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    section_heading("Command Preview")
-    cmd = build_command_preview(opts, url or "")
-    st.code(cmd, language="bash")
-
-    st.markdown("<br>", unsafe_allow_html=True)
+    section_heading("Actions")
 
     btn_col1, btn_col2, btn_col3 = st.columns([1, 1, 2])
     with btn_col1:
@@ -1462,31 +1673,49 @@ def render_download_tab():
 
     if st.session_state.preview_info:
         info = st.session_state.preview_info
-        st.markdown('<div class="sl-section">Preview</div>', unsafe_allow_html=True)
-        p_col1, p_col2 = st.columns([1, 2])
+        section_heading("Preview")
+        thumb = info.get("thumbnail", "")
+        title = info.get("title", "Unknown")
+        uploader = info.get("uploader", "—")
+        duration = fmt_duration(info.get("duration"))
+        views = info.get("view_count")
+        views_str = f" · {views:,.0f} views" if views else ""
+        upload_date = info.get("upload_date", "")
+        if upload_date and len(upload_date) == 8:
+            upload_date = f"{upload_date[:4]}-{upload_date[4:6]}-{upload_date[6:]}"
+
+        fmts = info.get("formats", [])
+        badge_html = ""
+        if fmts:
+            heights = sorted(
+                set(f["height"] for f in fmts if f.get("height")),
+                reverse=True,
+            )[:6]
+            badge_html = " ".join(
+                f'<span class="sl-badge sl-badge-default">{h}p</span>' for h in heights
+            )
+            if any(f.get("acodec") and f.get("acodec") != "none" and not f.get("height") for f in fmts):
+                badge_html += ' <span class="sl-badge sl-badge-default">audio</span>'
+
+        p_col1, p_col2 = st.columns([1, 2.5])
         with p_col1:
-            thumb = info.get("thumbnail")
             if thumb:
                 st.image(thumb, use_container_width=True)
         with p_col2:
             st.markdown(f"""
-            <div class="sl-card" style="padding:0">
-                <div class="sl-job-title">{info.get('title','Unknown')}</div>
-                <div class="sl-job-meta">
-                    {info.get('uploader','—')} &nbsp;·&nbsp; {fmt_duration(info.get('duration'))}
+            <div style="padding:0.25rem 0">
+                <div class="sl-preview-title">{title}</div>
+                <div class="sl-preview-meta">
+                    {uploader} &nbsp;·&nbsp; {duration}{views_str}
                 </div>
+                <div style="display:flex;gap:0.375rem;flex-wrap:wrap;margin-bottom:0.5rem">{badge_html}</div>
+                {'<div class="sl-preview-meta">Upload: ' + upload_date + '</div>' if upload_date else ''}
             </div>
             """, unsafe_allow_html=True)
-            fmts = info.get("formats", [])
-            if fmts:
-                heights = sorted(
-                    set(f["height"] for f in fmts if f.get("height")),
-                    reverse=True,
-                )[:6]
-                badges = " ".join(
-                    f'<span class="sl-badge sl-badge-default">{h}p</span>' for h in heights
-                )
-                st.markdown(f"<br>{badges}", unsafe_allow_html=True)
+
+    section_heading("Command Preview")
+    cmd = build_command_preview(opts, url or "")
+    st.code(cmd, language="bash")
 
     if dl_clicked:
         if not url:
@@ -1507,10 +1736,10 @@ def render_queue_tab():
     active = live_queue_jobs()
 
     if not active:
-        empty_state("⬜", "Queue empty", "Start a download from the Download tab")
+        empty_state("📭", "Queue empty", "Start a download from the Download tab")
         return
 
-    section_heading(f"{len(active)} active download{'s' if len(active)>1 else ''}")
+    section_heading(f"{len(active)} active download{'s' if len(active) > 1 else ''}")
 
     for job in active:
         jid = job["id"]
@@ -1526,21 +1755,25 @@ def render_queue_tab():
         if job.get("playlist"):
             meta_parts.append(badge("playlist", "warning"))
 
+        url_display = (job.get("url", ""))[:55]
+        if len(job.get("url", "")) > 55:
+            url_display += "…"
+
         st.markdown(f"""
         <div class="sl-job-card">
           <div class="sl-job-title">{job.get('title') or 'Fetching title…'}</div>
           <div class="sl-job-meta">
             {''.join(meta_parts)}
-            <span style="opacity:0.5">{(job.get('url',''))[:60]}…</span>
+            <span style="opacity:0.35">{url_display}</span>
           </div>
         </div>
         """, unsafe_allow_html=True)
 
         if status == "running":
-            st.progress(min(int(progress), 100))
+            st.progress(min(int(progress), 100), text=f"{progress:.1f}%")
             speed = fmt_speed(detail.get("speed"))
             eta_raw = detail.get("eta")
-            eta = f"{int(eta_raw//60)}:{int(eta_raw%60):02d}" if eta_raw else "—"
+            eta = f"{int(eta_raw // 60)}:{int(eta_raw % 60):02d}" if eta_raw else "—"
             downloaded = fmt_bytes(detail.get("downloaded_bytes"))
             total = fmt_bytes(detail.get("total_bytes") or detail.get("total_bytes_estimate"))
             st.markdown(f"""
@@ -1551,7 +1784,7 @@ def render_queue_tab():
             </div>
             """, unsafe_allow_html=True)
         elif status == "queued":
-            st.progress(0, text="Waiting…")
+            st.progress(0, text="Waiting in queue…")
 
         c1, c2 = st.columns([1, 5])
         with c1:
@@ -1561,6 +1794,11 @@ def render_queue_tab():
 
     running = any(j.get("status") == "running" for j in active)
     if running:
+        st.markdown(
+            '<div style="text-align:center;font-size:0.6875rem;color:hsl(0 0% 30%);'
+            'padding:0.75rem 0">Auto-refreshing…</div>',
+            unsafe_allow_html=True,
+        )
         time.sleep(1.5)
         st.rerun()
 
@@ -1568,13 +1806,18 @@ def render_queue_tab():
 def render_formats_tab():
     section_heading("Inspect Formats")
 
-    url = st.text_input(
-        "URL to inspect",
-        placeholder="https://youtube.com/watch?v=...",
-        key="formats_url",
-    )
+    f_col1, f_col2 = st.columns([4, 1])
+    with f_col1:
+        url = st.text_input(
+            "URL to inspect",
+            placeholder="https://youtube.com/watch?v=...",
+            key="formats_url",
+        )
+    with f_col2:
+        st.markdown('<div style="height:1.6rem"></div>', unsafe_allow_html=True)
+        fetch_clicked = st.button("Fetch", key="fetch_formats_btn", type="primary", use_container_width=True)
 
-    if st.button("Fetch Formats", key="fetch_formats_btn", type="primary"):
+    if fetch_clicked:
         if not url:
             st.error("Please enter a URL.")
         else:
@@ -1587,142 +1830,268 @@ def render_formats_tab():
 
     if st.session_state.get("format_data"):
         data = st.session_state.format_data
-        st.markdown(f"**{data.get('title', 'Unknown')}**")
-        st.markdown(f"_{data.get('uploader', '—')} · {fmt_duration(data.get('duration'))}_")
+        title = data.get("title", "Unknown")
+        uploader = data.get("uploader", "—")
+        duration = fmt_duration(data.get("duration"))
+
+        st.markdown(f"""
+        <div class="sl-card" style="margin:0.75rem 0">
+            <div class="sl-preview-title">{title}</div>
+            <div class="sl-preview-meta">{uploader} &nbsp;·&nbsp; {duration}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
         formats = data.get("formats", [])
-        filter_type = st.radio("Filter", ["All", "Video Only", "Audio Only"], horizontal=True)
+
+        fc1, fc2 = st.columns([1, 1])
+        with fc1:
+            filter_type = st.radio("Filter", ["All", "Video Only", "Audio Only"], horizontal=True, key="fmt_filter")
+        with fc2:
+            sort_by = st.selectbox("Sort by", ["Resolution", "Bitrate", "Size", "Codec"], key="fmt_sort")
 
         if filter_type == "Video Only":
-            formats = [f for f in formats if f.get("is_video")]
+            formats = [f for f in formats if f.get("vcodec") and f.get("vcodec") != "none"]
         elif filter_type == "Audio Only":
-            formats = [f for f in formats if f.get("is_audio")]
+            formats = [f for f in formats if (f.get("acodec") and f.get("acodec") != "none" and (not f.get("vcodec") or f.get("vcodec") == "none"))]
 
         if formats:
-            st.dataframe(formats, use_container_width=True)
+            st.dataframe(formats, use_container_width=True, height=350)
+
+            a_col1, a_col2 = st.columns([2, 1])
+            with a_col1:
+                fmt_id = st.text_input("Use format ID", placeholder="e.g. 137+140", key="apply_fmt_id")
+            with a_col2:
+                st.markdown('<div style="height:1.6rem"></div>', unsafe_allow_html=True)
+                if st.button("Apply to Download Tab →", key="apply_fmt_btn", use_container_width=True):
+                    if fmt_id:
+                        st.session_state.dl_opts["format"] = fmt_id
+                        st.success(f"Format `{fmt_id}` applied.")
         else:
             empty_state("🎞️", "No formats found", "Try a different URL or filter")
 
 
 def render_history_tab():
-    section_heading("Download history")
+    section_heading("Download History")
 
-    search = st.text_input("Search", placeholder="Filter by title or URL...", key="history_search")
+    h_col1, h_col2 = st.columns([2, 1])
+    with h_col1:
+        search = st.text_input("Search", placeholder="Filter by title or URL…", key="history_search", label_visibility="collapsed")
+    with h_col2:
+        status_filter = st.multiselect(
+            "Status",
+            options=["done", "error", "cancelled"],
+            key="history_status_filter",
+            label_visibility="collapsed",
+            placeholder="Filter by status",
+        )
 
     jobs = api_get_history()
 
     if search:
-        jobs = [j for j in jobs if search.lower() in (j.get("title") or "").lower() or search.lower() in (j.get("url") or "").lower()]
+        sl = search.lower()
+        jobs = [j for j in jobs if sl in (j.get("title") or "").lower() or sl in (j.get("url") or "").lower()]
 
-    status_filter = st.multiselect(
-        "Filter by status",
-        options=["done", "error", "cancelled"],
-        key="history_status_filter",
-    )
     if status_filter:
         jobs = [j for j in jobs if j.get("status") in status_filter]
 
     if not jobs:
-        empty_state("📂", "No history yet", "Downloads will appear here")
+        empty_state("📂", "No history yet", "Completed downloads will appear here")
         return
 
-    for job in reversed(jobs):
+    jobs = list(reversed(jobs))
+
+    # Pagination
+    page_size = 20
+    if "history_page" not in st.session_state:
+        st.session_state.history_page = 0
+    total_pages = max(1, (len(jobs) + page_size - 1) // page_size)
+    page = min(st.session_state.history_page, total_pages - 1)
+    page_jobs = jobs[page * page_size:(page + 1) * page_size]
+
+    for job in page_jobs:
         status = job.get("status", "done")
         title = job.get("title") or job.get("url", "Unknown")
         created = job.get("created_at", "")[:16].replace("T", " ")
-        finished = (job.get("finished_at") or "")[:16].replace("T", " ")
+        filepath = job.get("filepath", "")
+        error_msg = job.get("error_msg", "")
+
+        meta_parts = [
+            status_badge(status),
+            f'<span class="sl-badge sl-badge-default">{job.get("format", "?").upper()}</span>',
+            f'<span class="sl-badge sl-badge-default">{job.get("quality", "?")}</span>',
+            f'<span style="opacity:0.4">{created}</span>',
+        ]
+
+        filepath_html = ""
+        if filepath:
+            filepath_html = (
+                f'<div style="font-family:\'Geist Mono\',monospace;font-size:0.6875rem;'
+                f'color:hsl(0 0% 35%);margin-top:0.375rem;overflow:hidden;text-overflow:ellipsis">'
+                f'{filepath}</div>'
+            )
 
         st.markdown(f"""
         <div class="sl-job-card">
             <div class="sl-job-title">{title}</div>
-            <div class="sl-job-meta">
-                {status_badge(status)}
-                <span class="sl-badge sl-badge-default">{job.get('format','?').upper()}</span>
-                <span class="sl-badge sl-badge-default">{job.get('quality','?')}</span>
-                <span style="opacity:0.5">{created}</span>
-            </div>
+            <div class="sl-job-meta">{''.join(meta_parts)}</div>
+            {filepath_html}
         </div>
         """, unsafe_allow_html=True)
 
-        if job.get("error_msg"):
+        if error_msg:
             with st.expander("Error details"):
-                st.code(job["error_msg"], language=None)
+                st.code(error_msg, language=None)
+
+        if status == "error":
+            if st.button("↺ Retry", key=f"retry_{job.get('id', created)}"):
+                st.session_state.dl_opts["url"] = job.get("url", "")
+                st.success("URL loaded in Download tab. Switch tabs to retry.")
+
+    # Pagination controls
+    if total_pages > 1:
+        p_col1, p_col2, p_col3 = st.columns([1, 2, 1])
+        with p_col1:
+            if st.button("← Previous", key="hist_prev", disabled=(page == 0), use_container_width=True):
+                st.session_state.history_page = max(0, page - 1)
+                st.rerun()
+        with p_col2:
+            st.markdown(
+                f'<div class="sl-pagination">Page {page + 1} of {total_pages}</div>',
+                unsafe_allow_html=True,
+            )
+        with p_col3:
+            if st.button("Next →", key="hist_next", disabled=(page >= total_pages - 1), use_container_width=True):
+                st.session_state.history_page = min(total_pages - 1, page + 1)
+                st.rerun()
 
 
 def render_settings_tab():
+    # ── Section 1: Cookie Authentication ──
     section_heading("Cookie Authentication")
 
     st.markdown("""
-    <div class="sl-card">
-    🍪 Some platforms require authentication cookies. Export your browser cookies as a <code>cookies.txt</code> (Netscape format) using a browser extension like <em>Get cookies.txt</em>, then upload it here.
+    <div class="sl-settings-card">
+        <div style="display:flex;align-items:flex-start;gap:0.75rem">
+          <span style="font-size:1.25rem">🍪</span>
+          <div style="font-size:0.8125rem;color:hsl(var(--muted-foreground));line-height:1.6">
+            Some platforms require authentication cookies. Export your browser cookies as a
+            <code>cookies.txt</code> (Netscape format) using a browser extension, then upload here.
+          </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    uploaded = st.file_uploader(
-        "Upload cookies.txt",
-        type=["txt"],
-        key="cookie_upload",
-        help="Netscape HTTP Cookie File format",
-        label_visibility="collapsed",
-    )
-
-    if uploaded:
-        col1, _ = st.columns([1, 3])
-        with col1:
-            if st.button("Upload cookies", key="upload_cookie_btn", use_container_width=True, type="primary"):
+    with st.expander("📤 Upload cookies.txt"):
+        uploaded = st.file_uploader(
+            "Upload cookies.txt",
+            type=["txt"],
+            key="cookie_upload",
+            help="Netscape HTTP Cookie File format",
+            label_visibility="collapsed",
+        )
+        if uploaded:
+            if st.button("Upload cookies", key="upload_cookie_btn", type="primary"):
                 ok, msg = api_upload_cookies(uploaded.read())
                 if ok:
                     st.success(msg)
                 else:
                     st.warning(msg)
 
-    st.markdown("<br>")
-    st.markdown(
-        '<div class="sl-section">Bookmarklet (YouTube auto-sync)</div>',
-        unsafe_allow_html=True
-    )
+    with st.expander("🌐 Load from browser"):
+        b_col1, b_col2 = st.columns(2)
+        with b_col1:
+            browser = st.selectbox(
+                "Browser",
+                options=[None, "chrome", "firefox", "edge", "safari", "brave", "opera", "vivaldi"],
+                format_func=lambda x: "Select browser…" if x is None else x.capitalize(),
+                key="settings_cookie_browser",
+            )
+        with b_col2:
+            profile = st.text_input("Profile (optional)", placeholder="Default", key="settings_cookie_profile")
+        if browser:
+            if st.button("Apply browser cookies", key="apply_browser_cookies"):
+                st.session_state.dl_opts["cookies_from_browser"] = browser
+                st.success(f"Browser cookies set to **{browser}**")
 
-    bookmarklet_code = """javascript:(function(){
+    with st.expander("📑 Bookmarklet (YouTube)"):
+        bookmarklet_code = """javascript:(function(){
   var cs=document.cookie.split(';').map(c=>{var p=c.trim().split('=');return{name:p[0],value:p.slice(1).join('='),domain:location.hostname,path:'/',secure:true};});
   fetch('http://localhost:8000/api/settings/cookies/youtube',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer TOKEN'},body:JSON.stringify({cookies:cs})}).then(r=>r.json()).then(d=>alert('Streamline: '+d.message)).catch(e=>alert('Error: '+e));
 })();"""
+        st.code(bookmarklet_code, language="javascript")
+        st.markdown(
+            '<p style="font-size:0.75rem;color:hsl(var(--muted-foreground));line-height:1.6">'
+            'Replace <code>TOKEN</code> with your Bearer token, drag to bookmarks bar. '
+            'Click while on YouTube to sync cookies.</p>',
+            unsafe_allow_html=True,
+        )
 
-    st.code(bookmarklet_code, language="javascript")
-    st.markdown("""
-    <p style="font-size:0.78rem;color:hsl(var(--muted-foreground));line-height:1.6;">
-    Replace <code>TOKEN</code> with your Bearer token, then drag this snippet to your bookmarks bar.
-    Click it while on YouTube to automatically sync your session cookies.
-    </p>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<hr>", unsafe_allow_html=True)
+    # ── Section 2: Default Download Options ──
     section_heading("Default Download Options")
 
-    if st.button("Load Defaults", key="load_defaults_btn"):
-        defaults = api_get_defaults()
-        if defaults:
-            st.session_state.defaults = defaults
-            st.success("Defaults loaded")
+    st.markdown(
+        '<div class="sl-settings-card">'
+        '<div style="font-size:0.8125rem;color:hsl(var(--muted-foreground));margin-bottom:0.75rem">'
+        'Save your current download options as defaults, or load previously saved defaults.</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
-    if st.button("Save Current as Defaults", key="save_defaults_btn"):
-        if api_save_defaults(st.session_state.dl_opts):
-            st.success("Defaults saved")
-        else:
-            st.warning("Failed to save defaults")
+    d_col1, d_col2, d_col3 = st.columns([1, 1, 2])
+    with d_col1:
+        if st.button("Load Defaults", key="load_defaults_btn", use_container_width=True):
+            defaults = api_get_defaults()
+            if defaults:
+                st.session_state.defaults = defaults
+                st.success("Defaults loaded")
+            else:
+                st.info("No saved defaults found")
+    with d_col2:
+        if st.button("Save Current", key="save_defaults_btn", use_container_width=True, type="primary"):
+            if api_save_defaults(st.session_state.dl_opts):
+                st.success("Defaults saved")
+            else:
+                st.warning("Failed to save defaults")
 
-    st.markdown("<hr>", unsafe_allow_html=True)
+    # ── Section 3: yt-dlp Info ──
     section_heading("yt-dlp Info")
 
     if st.button("Check Versions", key="check_versions_btn"):
         versions = api_get_tool_versions()
         if versions:
-            st.json(versions)
-        else:
-            st.warning("Could not fetch version info")
+            ytdlp_ver = versions.get("yt_dlp", "unknown")
+            ffmpeg_ver = versions.get("ffmpeg", "")
+            ffprobe_ver = versions.get("ffprobe", "")
+            aria2c_ver = versions.get("aria2c", "")
 
-    st.markdown("<hr>", unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="sl-settings-card">
+                <div class="sl-version-row">
+                    <span class="sl-version-ok">✓</span>
+                    <span>yt-dlp</span>
+                    <span style="color:hsl(var(--muted-foreground))">{ytdlp_ver}</span>
+                </div>
+                <div class="sl-version-row">
+                    <span class="{'sl-version-ok' if ffmpeg_ver else 'sl-version-missing'}">{'✓' if ffmpeg_ver else '✗'}</span>
+                    <span>ffmpeg</span>
+                    <span style="color:hsl(var(--muted-foreground))">{ffmpeg_ver or 'not found'}</span>
+                </div>
+                <div class="sl-version-row">
+                    <span class="{'sl-version-ok' if ffprobe_ver else 'sl-version-missing'}">{'✓' if ffprobe_ver else '✗'}</span>
+                    <span>ffprobe</span>
+                    <span style="color:hsl(var(--muted-foreground))">{ffprobe_ver or 'not found'}</span>
+                </div>
+                <div class="sl-version-row">
+                    <span class="{'sl-version-ok' if aria2c_ver else 'sl-version-missing'}">{'✓' if aria2c_ver else '✗'}</span>
+                    <span>aria2c</span>
+                    <span style="color:hsl(var(--muted-foreground))">{aria2c_ver or 'not found'}</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.warning("Could not fetch version info (backend offline?)")
+
+    # ── Section 4: Session & Account ──
     section_heading("Session")
 
     cols = st.columns(4)
@@ -1730,7 +2099,7 @@ def render_settings_tab():
         st.metric("User", st.session_state.email or "—")
     with cols[1]:
         total = len(st.session_state.jobs)
-        st.metric("Total jobs", total)
+        st.metric("Total Jobs", total)
     with cols[2]:
         done = sum(1 for j in st.session_state.jobs.values() if j.get("status") == "done")
         st.metric("Completed", done)
