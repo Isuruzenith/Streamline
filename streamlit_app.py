@@ -1,9 +1,9 @@
 """
-yt-Z Downloader — Streamlit UI powered by streamlit-shadcn-ui
+Streamline — Personal Video Downloader
+A Streamlit UI for yt-dlp with shadcn/ui dark theme.
 """
 
 import streamlit as st
-import streamlit_shadcn_ui as ui
 import asyncio
 import threading
 import uuid
@@ -11,340 +11,337 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-# ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="yt-Z Downloader",
-    page_icon="⬇️",
+    page_title="Streamline — Personal Video Downloader",
+    page_icon="🎬",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-# ── Custom CSS for dark, refined aesthetic ────────────────────────────────────
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
 
-/* Global reset */
-html, body, [class*="css"] {
-    font-family: 'Syne', sans-serif !important;
-}
+def inject_design_system():
+    """Inject shadcn/ui default dark theme tokens, Geist fonts, and Streamlit widget overrides."""
+    st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap');
 
-/* Dark background */
-.stApp {
-    background: #0c0c0f;
-}
+    :root {
+      --background:             0 0% 3.9%;
+      --foreground:             0 0% 98%;
+      --card:                   0 0% 3.9%;
+      --card-foreground:        0 0% 98%;
+      --popover:                0 0% 3.9%;
+      --popover-foreground:     0 0% 98%;
+      --primary:                0 0% 98%;
+      --primary-foreground:     0 0% 9%;
+      --secondary:              0 0% 14.9%;
+      --secondary-foreground:   0 0% 98%;
+      --muted:                  0 0% 14.9%;
+      --muted-foreground:       0 0% 63.9%;
+      --accent:                 0 0% 14.9%;
+      --accent-foreground:      0 0% 98%;
+      --destructive:            0 62.8% 30.6%;
+      --destructive-foreground: 0 0% 98%;
+      --border:                 0 0% 14.9%;
+      --input:                  0 0% 14.9%;
+      --ring:                   0 0% 83.1%;
+      --radius:                 0.5rem;
+    }
 
-/* Main container */
-.main .block-container {
-    padding: 0 2rem 2rem 2rem;
-    max-width: 900px;
-    margin: 0 auto;
-}
+    html, body, [class*="css"] {
+      font-family: 'Geist', -apple-system, sans-serif !important;
+      -webkit-font-smoothing: antialiased;
+    }
+    .stApp {
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+    .main .block-container {
+      padding: 0 1.5rem 2rem 1.5rem;
+      max-width: 1100px;
+    }
+    header[data-testid="stHeader"] {
+      background: hsl(var(--background));
+      border-bottom: 1px solid hsl(var(--border));
+    }
 
-/* Remove default Streamlit chrome padding */
-header[data-testid="stHeader"] {
-    background: transparent;
-    border-bottom: 1px solid #1e1e26;
-}
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea,
+    .stNumberInput > div > div > input {
+      background-color: hsl(var(--input)) !important;
+      border: 1px solid hsl(var(--border)) !important;
+      border-radius: var(--radius) !important;
+      color: hsl(var(--foreground)) !important;
+      font-family: 'Geist', sans-serif !important;
+      font-size: 0.875rem !important;
+      height: 36px;
+      padding: 0 0.75rem !important;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .stTextArea > div > div > textarea { height: auto; padding: 0.5rem 0.75rem !important; }
+    .stTextInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus,
+    .stNumberInput > div > div > input:focus {
+      border-color: hsl(var(--ring)) !important;
+      box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2) !important;
+      outline: none !important;
+    }
+    .stTextInput label, .stTextArea label, .stNumberInput label,
+    .stSelectbox label, .stMultiSelect label, .stSlider label,
+    .stDateInput label, .stFileUploader label, .stCheckbox label,
+    .stRadio label span, .stToggle label {
+      color: hsl(var(--muted-foreground)) !important;
+      font-size: 0.75rem !important;
+      font-weight: 500 !important;
+      letter-spacing: 0.025em !important;
+    }
 
-/* Custom scrollbar */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: #0c0c0f; }
-::-webkit-scrollbar-thumb { background: #2a2a35; border-radius: 2px; }
+    .stSelectbox > div > div,
+    .stMultiSelect > div > div {
+      background-color: hsl(var(--input)) !important;
+      border: 1px solid hsl(var(--border)) !important;
+      border-radius: var(--radius) !important;
+      color: hsl(var(--foreground)) !important;
+      font-size: 0.875rem !important;
+      min-height: 36px !important;
+    }
+    .stSelectbox > div > div:focus-within,
+    .stMultiSelect > div > div:focus-within {
+      border-color: hsl(var(--ring)) !important;
+    }
 
-/* Headings */
-h1, h2, h3 {
-    font-family: 'Syne', sans-serif !important;
-    letter-spacing: -0.02em;
-}
+    .stButton > button {
+      font-family: 'Geist', sans-serif !important;
+      font-size: 0.875rem !important;
+      font-weight: 500 !important;
+      height: 36px;
+      padding: 0 1rem !important;
+      border-radius: var(--radius) !important;
+      transition: opacity 0.15s, background-color 0.15s !important;
+      cursor: pointer;
+    }
+    .stButton > button[kind="primary"] {
+      background-color: hsl(var(--primary)) !important;
+      color: hsl(var(--primary-foreground)) !important;
+      border: none !important;
+    }
+    .stButton > button[kind="primary"]:hover { opacity: 0.9 !important; }
+    .stButton > button[kind="secondary"],
+    .stButton > button:not([kind]) {
+      background-color: hsl(var(--secondary)) !important;
+      color: hsl(var(--secondary-foreground)) !important;
+      border: 1px solid hsl(var(--border)) !important;
+    }
+    .stButton > button[kind="secondary"]:hover,
+    .stButton > button:not([kind]):hover {
+      background-color: hsl(var(--accent)) !important;
+    }
 
-/* Tabs override */
-[data-baseweb="tab-list"] {
-    background: #13131a !important;
-    border-bottom: 1px solid #1e1e28 !important;
-    gap: 0 !important;
-}
-[data-baseweb="tab"] {
-    background: transparent !important;
-    color: #666 !important;
-    font-family: 'Syne', sans-serif !important;
-    font-size: 0.85rem !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.05em !important;
-    text-transform: uppercase !important;
-    padding: 0.75rem 1.5rem !important;
-    border-bottom: 2px solid transparent !important;
-    transition: all 0.2s ease !important;
-}
-[data-baseweb="tab"]:hover {
-    color: #e0e0e8 !important;
-    background: rgba(255,255,255,0.03) !important;
-}
-[aria-selected="true"][data-baseweb="tab"] {
-    color: #a78bfa !important;
-    border-bottom: 2px solid #a78bfa !important;
-    background: transparent !important;
-}
+    [data-baseweb="tab-list"] {
+      background: transparent !important;
+      border-bottom: 1px solid hsl(var(--border)) !important;
+      gap: 0 !important;
+    }
+    [data-baseweb="tab"] {
+      background: transparent !important;
+      color: hsl(var(--muted-foreground)) !important;
+      font-family: 'Geist', sans-serif !important;
+      font-size: 0.875rem !important;
+      font-weight: 500 !important;
+      padding: 0.625rem 1rem !important;
+      border-bottom: 2px solid transparent !important;
+      transition: color 0.15s, border-color 0.15s !important;
+    }
+    [data-baseweb="tab"]:hover { color: hsl(var(--foreground)) !important; }
+    [aria-selected="true"][data-baseweb="tab"] {
+      color: hsl(var(--foreground)) !important;
+      border-bottom-color: hsl(var(--foreground)) !important;
+    }
 
-/* Input styles */
-.stTextInput > div > div > input {
-    background: #13131a !important;
-    border: 1px solid #1e1e28 !important;
-    color: #e0e0e8 !important;
-    font-family: 'DM Mono', monospace !important;
-    font-size: 0.88rem !important;
-    border-radius: 6px !important;
-    transition: border-color 0.2s ease !important;
-}
-.stTextInput > div > div > input:focus {
-    border-color: #a78bfa !important;
-    box-shadow: 0 0 0 3px rgba(167,139,250,0.1) !important;
-}
+    .streamlit-expanderHeader {
+      background-color: hsl(var(--card)) !important;
+      border: 1px solid hsl(var(--border)) !important;
+      border-radius: var(--radius) !important;
+      color: hsl(var(--foreground)) !important;
+      font-family: 'Geist', sans-serif !important;
+      font-size: 0.875rem !important;
+      font-weight: 500 !important;
+      padding: 0.625rem 1rem !important;
+    }
+    .streamlit-expanderContent {
+      border: 1px solid hsl(var(--border)) !important;
+      border-top: none !important;
+      border-radius: 0 0 var(--radius) var(--radius) !important;
+      background-color: hsl(var(--card)) !important;
+      padding: 1rem !important;
+    }
 
-/* Selectbox */
-.stSelectbox > div > div {
-    background: #13131a !important;
-    border: 1px solid #1e1e28 !important;
-    color: #e0e0e8 !important;
-    border-radius: 6px !important;
-}
+    .stProgress > div > div {
+      background-color: hsl(var(--secondary)) !important;
+      border-radius: 9999px !important;
+      height: 6px !important;
+    }
+    .stProgress > div > div > div {
+      background-color: hsl(var(--foreground)) !important;
+      border-radius: 9999px !important;
+    }
 
-/* File uploader */
-.stFileUploader {
-    background: #13131a !important;
-    border: 1px dashed #2a2a35 !important;
-    border-radius: 8px !important;
-}
+    .stCheckbox > label > div:first-child { border-radius: calc(var(--radius) / 2) !important; }
+    .stAlert {
+      border-radius: var(--radius) !important;
+      border-width: 1px !important;
+      font-size: 0.875rem !important;
+    }
+    .stDataFrame { border: 1px solid hsl(var(--border)) !important; border-radius: var(--radius) !important; }
 
-/* Cards/metric containers */
-div[data-testid="metric-container"] {
-    background: #13131a;
-    border: 1px solid #1e1e28;
-    border-radius: 8px;
-    padding: 1rem;
-}
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: hsl(var(--background)); }
+    ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
 
-/* Progress bar */
-.stProgress > div > div > div {
-    background: linear-gradient(90deg, #7c3aed, #a78bfa) !important;
-    border-radius: 4px !important;
-}
-.stProgress > div > div {
-    background: #1e1e28 !important;
-    border-radius: 4px !important;
-}
+    .stFileUploader > div {
+      background-color: hsl(var(--card)) !important;
+      border: 1px dashed hsl(var(--border)) !important;
+      border-radius: var(--radius) !important;
+    }
 
-/* Alerts */
-.stAlert {
-    border-radius: 8px !important;
-    border: none !important;
-    font-size: 0.88rem !important;
-}
+    hr { border-color: hsl(var(--border)) !important; margin: 1.5rem 0 !important; }
+    code, .stCode {
+      font-family: 'Geist Mono', monospace !important;
+      font-size: 0.8125rem !important;
+      background-color: hsl(var(--secondary)) !important;
+      border-radius: calc(var(--radius) / 2) !important;
+      padding: 0.125rem 0.375rem !important;
+    }
+    .stCodeBlock {
+      background-color: hsl(var(--card)) !important;
+      border: 1px solid hsl(var(--border)) !important;
+      border-radius: var(--radius) !important;
+    }
 
-/* Checkbox */
-.stCheckbox label {
-    color: #aaa !important;
-    font-size: 0.88rem !important;
-}
+    .mono { font-family: 'Geist Mono', monospace !important; }
 
-/* Expander */
-.streamlit-expanderHeader {
-    background: #13131a !important;
-    border: 1px solid #1e1e28 !important;
-    border-radius: 6px !important;
-    color: #888 !important;
-    font-size: 0.85rem !important;
-}
+    .sl-card {
+      background-color: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+    }
+    .sl-badge {
+      display: inline-flex; align-items: center;
+      border-radius: 9999px;
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.6875rem; font-weight: 500;
+      padding: 0.125rem 0.625rem;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .sl-badge-default  { background: hsl(var(--secondary)); color: hsl(var(--secondary-foreground)); }
+    .sl-badge-success  { background: hsl(142 76% 10%); color: hsl(142 76% 60%); border: 1px solid hsl(142 76% 20%); }
+    .sl-badge-error    { background: hsl(var(--destructive) / 0.15); color: hsl(0 80% 65%); border: 1px solid hsl(var(--destructive)); }
+    .sl-badge-warning  { background: hsl(38 92% 10%); color: hsl(38 92% 60%); border: 1px solid hsl(38 92% 20%); }
+    .sl-badge-running  { background: hsl(217 91% 10%); color: hsl(217 91% 65%); border: 1px solid hsl(217 91% 20%); }
+    .sl-section {
+      font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: hsl(var(--muted-foreground));
+      display: flex; align-items: center; gap: 0.75rem;
+      margin: 1.25rem 0 0.875rem 0;
+    }
+    .sl-section::after {
+      content: ''; flex: 1; height: 1px; background: hsl(var(--border));
+    }
+    .sl-code-preview {
+      font-family: 'Geist Mono', monospace; font-size: 0.78125rem;
+      background: hsl(var(--card)); border: 1px solid hsl(var(--border));
+      border-radius: var(--radius); padding: 0.875rem 1rem;
+      color: hsl(var(--muted-foreground)); line-height: 1.6;
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .sl-code-preview .hl { color: hsl(var(--foreground)); }
+    .sl-job-card {
+      background: hsl(var(--card)); border: 1px solid hsl(var(--border));
+      border-radius: var(--radius); padding: 1rem 1.25rem;
+      margin-bottom: 0.625rem;
+      transition: border-color 0.15s;
+    }
+    .sl-job-card:hover { border-color: hsl(var(--ring) / 0.5); }
+    .sl-job-title {
+      font-size: 0.9375rem; font-weight: 600;
+      color: hsl(var(--foreground));
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 0.25rem;
+    }
+    .sl-job-meta {
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.6875rem; color: hsl(var(--muted-foreground));
+      display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;
+      margin-bottom: 0.625rem;
+    }
+    .sl-progress-detail {
+      font-family: 'Geist Mono', monospace;
+      font-size: 0.6875rem; color: hsl(var(--muted-foreground));
+      margin-top: 0.375rem;
+      display: flex; gap: 1.25rem;
+    }
+    .sl-wordmark {
+      font-family: 'Geist', sans-serif;
+      font-size: 1.25rem; font-weight: 700;
+      letter-spacing: -0.025em;
+      color: hsl(var(--foreground));
+    }
+    .sl-empty-state {
+      text-align: center; padding: 3rem 1rem;
+      color: hsl(var(--muted-foreground));
+    }
+    .sl-empty-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .sl-empty-title {
+      font-size: 0.875rem; font-weight: 600;
+      letter-spacing: 0.025em; margin-bottom: 0.25rem;
+      color: hsl(var(--muted-foreground));
+    }
+    .sl-empty-sub { font-size: 0.75rem; color: hsl(var(--border)); }
+    </style>
+    """, unsafe_allow_html=True)
 
-/* Labels */
-.stTextInput label, .stSelectbox label, .stFileUploader label {
-    color: #888 !important;
-    font-size: 0.78rem !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.08em !important;
-    text-transform: uppercase !important;
-    margin-bottom: 0.3rem !important;
-}
 
-/* Divider */
-hr {
-    border-color: #1e1e28 !important;
-    margin: 1.5rem 0 !important;
-}
+inject_design_system()
 
-/* Mono badge */
-.badge-mono {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.72rem;
-    background: #1e1e28;
-    color: #888;
-    padding: 0.2em 0.5em;
-    border-radius: 4px;
-    display: inline-block;
-}
 
-/* Status pill */
-.status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4em;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.72rem;
-    font-weight: 500;
-    padding: 0.25em 0.65em;
-    border-radius: 99px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-.status-queued   { background: #1e1e28; color: #888; }
-.status-running  { background: #1a1a2e; color: #a78bfa; }
-.status-done     { background: #0f2a1a; color: #4ade80; }
-.status-error    { background: #2a1010; color: #f87171; }
-.status-cancelled { background: #1e1e28; color: #666; }
-
-/* Job card */
-.job-card {
-    background: #13131a;
-    border: 1px solid #1e1e28;
-    border-radius: 10px;
-    padding: 1rem 1.2rem;
-    margin-bottom: 0.75rem;
-    transition: border-color 0.2s ease;
-}
-.job-card:hover { border-color: #2a2a40; }
-.job-title {
-    font-weight: 700;
-    font-size: 0.92rem;
-    color: #e0e0e8;
-    margin-bottom: 0.25rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.job-url {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.72rem;
-    color: #555;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 0.5rem;
-}
-.job-meta {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-/* Thumbnail */
-.thumb-wrap {
-    width: 100%;
-    aspect-ratio: 16/9;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #1e1e28;
-    margin-bottom: 1rem;
-}
-.thumb-wrap img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* Wordmark */
-.wordmark {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.6rem;
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    color: #e0e0e8;
-    display: flex;
-    align-items: baseline;
-    gap: 0.1em;
-    padding: 1.5rem 0 0.75rem 0;
-}
-.wordmark span {
-    color: #7c3aed;
-}
-
-/* Info preview card */
-.preview-card {
-    background: #13131a;
-    border: 1px solid #1e1e28;
-    border-radius: 10px;
-    overflow: hidden;
-    margin-top: 1rem;
-}
-.preview-body {
-    padding: 1rem 1.2rem;
-}
-.preview-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #e0e0e8;
-    margin-bottom: 0.25rem;
-    line-height: 1.3;
-}
-.preview-sub {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.75rem;
-    color: #666;
-}
-
-/* Section heading */
-.section-label {
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #555;
-    margin-bottom: 1rem;
-    margin-top: 0.25rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-.section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: #1e1e28;
-}
-
-/* Cookie card */
-.cookie-note {
-    background: #0e1520;
-    border: 1px solid #1a2540;
-    border-radius: 8px;
-    padding: 0.9rem 1.1rem;
-    font-size: 0.82rem;
-    color: #6b8cba;
-    line-height: 1.6;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ── Session state defaults ────────────────────────────────────────────────────
 def init_state():
     defaults = {
         "token": None,
         "email": None,
-        "jobs": {},           # job_id -> job dict
+        "jobs": {},
         "preview_info": None,
-        "auth_tab": "Login",
-        "active_tab": "Download",
         "cookie_status": None,
+        "dl_opts": {
+            "format": "mp4",
+            "quality": "best",
+            "playlist": False,
+            "embed_metadata": False,
+            "embed_thumbnail": False,
+            "write_subs": False,
+            "write_auto_subs": False,
+            "subtitles_langs": [],
+            "extract_audio": False,
+            "sponsorblock": None,
+            "rate_limit": None,
+            "proxy_url": None,
+        },
+        "defaults": {},
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
+
 init_state()
 
-# ── Async helpers ─────────────────────────────────────────────────────────────
+
+API_BASE = "http://localhost:8000"
+
+
 def run_async(coro):
-    """Run a coroutine synchronously from Streamlit's thread."""
     try:
         loop = asyncio.get_event_loop()
         if loop.is_running():
@@ -357,9 +354,8 @@ def run_async(coro):
     except Exception:
         return asyncio.run(coro)
 
-# ── Fake job runner (mirrors queue.py logic for local Streamlit demo) ─────────
+
 def _mock_job_runner(job_id: str):
-    """Background thread that simulates download progress."""
     import random
     job = st.session_state.jobs.get(job_id)
     if not job:
@@ -377,8 +373,6 @@ def _mock_job_runner(job_id: str):
     job["progress"] = 100.0
     job["finished_at"] = datetime.utcnow().isoformat()
 
-# ── Auth helpers (calls real FastAPI when backend is running) ─────────────────
-API_BASE = "http://localhost:8000"
 
 def api_login(email: str, password: str):
     import requests
@@ -391,6 +385,7 @@ def api_login(email: str, password: str):
     except Exception as e:
         return None, f"Backend offline — running in demo mode. ({e})"
 
+
 def api_register(email: str, password: str):
     import requests
     try:
@@ -401,6 +396,7 @@ def api_register(email: str, password: str):
         return None, r.json().get("detail", "Registration failed")
     except Exception as e:
         return None, f"Backend offline — demo mode. ({e})"
+
 
 def api_get_info(url: str):
     import requests
@@ -415,7 +411,6 @@ def api_get_info(url: str):
             return r.json(), None
         return None, r.json().get("detail", "Failed to fetch info")
     except Exception:
-        # Demo mode: return fake info
         return {
             "title": "Demo Video Title (Backend Offline)",
             "uploader": "Demo Channel",
@@ -423,14 +418,15 @@ def api_get_info(url: str):
             "thumbnail": "https://picsum.photos/seed/ytvid/640/360",
         }, None
 
-def api_start_download(url, fmt, quality, playlist):
+
+def api_start_download(url, opts):
     import requests
     if not st.session_state.token:
         return None, "Not authenticated"
     try:
         r = requests.post(
             f"{API_BASE}/api/download",
-            json={"url": url, "format": fmt, "quality": quality, "playlist": playlist},
+            json={"url": url, **opts},
             headers={"Authorization": f"Bearer {st.session_state.token}"},
             timeout=10,
         )
@@ -438,14 +434,13 @@ def api_start_download(url, fmt, quality, playlist):
             return r.json(), None
         return None, r.json().get("detail", "Failed to start download")
     except Exception:
-        # Demo mode: create a local mock job
         job_id = str(uuid.uuid4())
         job = {
             "id": job_id,
             "url": url,
-            "format": fmt,
-            "quality": quality,
-            "playlist": playlist,
+            "format": opts.get("format", "mp4"),
+            "quality": opts.get("quality", "best"),
+            "playlist": opts.get("playlist", False),
             "status": "queued",
             "progress": 0.0,
             "title": st.session_state.preview_info.get("title", url) if st.session_state.preview_info else url,
@@ -460,9 +455,9 @@ def api_start_download(url, fmt, quality, playlist):
         t.start()
         return job, None
 
+
 def api_cancel_job(job_id):
     import requests
-    # Try local first
     if job_id in st.session_state.jobs:
         st.session_state.jobs[job_id]["_cancel"] = True
         st.session_state.jobs[job_id]["status"] = "cancelled"
@@ -477,6 +472,7 @@ def api_cancel_job(job_id):
     except Exception:
         return False
 
+
 def api_get_history():
     import requests
     try:
@@ -489,9 +485,9 @@ def api_get_history():
             return r.json()
     except Exception:
         pass
-    # Return done/cancelled local jobs
     return [j for j in st.session_state.jobs.values()
             if j.get("status") in ("done", "cancelled", "error")]
+
 
 def api_upload_cookies(file_bytes):
     import requests
@@ -506,213 +502,215 @@ def api_upload_cookies(file_bytes):
     except Exception as e:
         return False, f"Demo mode — cookie upload simulated. ({e})"
 
-# ── Utility ───────────────────────────────────────────────────────────────────
+
+def fmt_bytes(n):
+    if not n:
+        return "—"
+    for unit in ("B", "KB", "MB", "GB"):
+        if n < 1024:
+            return f"{n:.1f} {unit}"
+        n /= 1024
+    return f"{n:.1f} TB"
+
+
+def fmt_speed(bps):
+    if not bps:
+        return "—"
+    return fmt_bytes(int(bps)) + "/s"
+
+
 def fmt_duration(secs):
     if not secs:
         return "—"
     secs = int(secs)
     h, m, s = secs // 3600, (secs % 3600) // 60, secs % 60
-    if h:
-        return f"{h}:{m:02d}:{s:02d}"
-    return f"{m}:{s:02d}"
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
-def status_pill(status):
-    icons = {"queued": "○", "running": "◉", "done": "●", "error": "✕", "cancelled": "⊘"}
+
+def card(content, cls=""):
+    return f'<div class="sl-card {cls}">{content}</div>'
+
+
+def badge(text, variant="default"):
+    return f'<span class="sl-badge sl-badge-{variant}">{text}</span>'
+
+
+def status_badge(status):
+    icons = {"queued": "○", "running": "◉", "done": "●", "error": "✕", "cancelled": "⊘", "finished": "●"}
+    variant_map = {"queued": "default", "running": "running", "done": "success", "finished": "success", "error": "error", "cancelled": "default"}
     icon = icons.get(status, "○")
-    return f'<span class="status-pill status-{status}">{icon} {status}</span>'
+    variant = variant_map.get(status, "default")
+    return badge(f"{icon} {status}", variant)
+
+
+def section_heading(text):
+    st.markdown(f'<div class="sl-section">{text}</div>', unsafe_allow_html=True)
+
+
+def wordmark():
+    return '<span class="sl-wordmark">Streamline</span>'
+
+
+def empty_state(icon, title, subtitle=""):
+    st.markdown(f"""
+    <div class="sl-empty-state">
+      <div class="sl-empty-icon">{icon}</div>
+      <div class="sl-empty-title">{title}</div>
+      <div class="sl-empty-sub">{subtitle}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
 
 def live_queue_jobs():
-    """Get jobs that are still active (queued or running)."""
     return [j for j in st.session_state.jobs.values()
             if j.get("status") in ("queued", "running")]
 
-# ════════════════════════════════════════════════════════════════════════════
-#  PAGE: AUTH
-# ════════════════════════════════════════════════════════════════════════════
+
 def render_auth():
-    st.markdown('<div class="wordmark">yt-<span>Z</span></div>', unsafe_allow_html=True)
-    st.markdown("##### Download anything. Fast.")
-
-    col, _ = st.columns([1.2, 1])
+    _, col, _ = st.columns([1, 1.2, 1])
     with col:
-        tab = ui.tabs(
-            options=["Login", "Register"],
-            default_value=st.session_state.auth_tab,
-            key="auth_tab_widget",
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown(f'{wordmark()}', unsafe_allow_html=True)
+        st.markdown(
+            '<p style="color:hsl(var(--muted-foreground));font-size:0.875rem;margin:0.25rem 0 1.5rem">Personal video downloader</p>',
+            unsafe_allow_html=True
         )
 
-        st.markdown("<br>", unsafe_allow_html=True)
+        tab = st.tabs(["Sign in", "Register"])
 
-        email = ui.input(
-            default_value="",
-            placeholder="you@example.com",
-            type="text",
-            key="auth_email",
-        )
-        password = ui.input(
-            default_value="",
-            placeholder="Password",
-            type="password",
-            key="auth_password",
-        )
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        if tab == "Login":
-            clicked = ui.button("Sign in →", key="login_btn", variant="default", class_name="w-full")
-            if clicked and email and password:
-                with st.spinner("Signing in…"):
-                    token, err = api_login(email, password)
-                if err and "demo" not in err.lower():
-                    ui.alert_dialog(
-                        show=True,
-                        title="Login failed",
-                        description=err,
-                        confirm_label="OK",
-                        cancel_label="",
-                        key="login_err_dialog",
-                    )
-                else:
-                    if token:
-                        st.session_state.token = token
+        with tab[0]:
+            st.markdown("<br>", unsafe_allow_html=True)
+            email = st.text_input("Email", placeholder="you@example.com", key="auth_email_login")
+            password = st.text_input("Password", type="password", placeholder="Password", key="auth_pw_login")
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("Sign in →", key="login_btn", use_container_width=True, type="primary"):
+                if email and password:
+                    with st.spinner(""):
+                        token, err = api_login(email, password)
+                    if err and "demo" not in err.lower():
+                        st.error(err)
                     else:
-                        # Demo mode auto-login
-                        st.session_state.token = "demo-token"
-                    st.session_state.email = email
-                    st.rerun()
-        else:
-            clicked = ui.button("Create account →", key="reg_btn", variant="default", class_name="w-full")
-            if clicked and email and password:
-                with st.spinner("Creating account…"):
-                    token, err = api_register(email, password)
-                if err and "demo" not in err.lower():
-                    ui.alert_dialog(
-                        show=True,
-                        title="Registration failed",
-                        description=err,
-                        confirm_label="OK",
-                        cancel_label="",
-                        key="reg_err_dialog",
-                    )
-                else:
-                    st.session_state.token = token or "demo-token"
-                    st.session_state.email = email
-                    st.rerun()
+                        st.session_state.token = token or "demo-token"
+                        st.session_state.email = email
+                        st.rerun()
 
-        st.markdown("""
-        <p style="font-size:0.75rem;color:#444;margin-top:1.5rem;line-height:1.6;">
-        Backend offline? The app runs in <strong style="color:#666;">demo mode</strong> — 
-        use any credentials to explore the UI.
-        </p>
-        """, unsafe_allow_html=True)
+        with tab[1]:
+            st.markdown("<br>", unsafe_allow_html=True)
+            email = st.text_input("Email", placeholder="you@example.com", key="auth_email_reg")
+            password = st.text_input("Password", type="password", placeholder="Choose a password", key="auth_pw_reg")
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("Create account →", key="reg_btn", use_container_width=True, type="primary"):
+                if email and password:
+                    with st.spinner(""):
+                        token, err = api_register(email, password)
+                    if err and "demo" not in err.lower():
+                        st.error(err)
+                    else:
+                        st.session_state.token = token or "demo-token"
+                        st.session_state.email = email
+                        st.rerun()
+
+        st.markdown(
+            '<p style="font-size:0.75rem;color:hsl(var(--border));margin-top:1.5rem;text-align:center">Backend offline? Use any credentials — demo mode.</p>',
+            unsafe_allow_html=True
+        )
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  PAGE: MAIN APP
-# ════════════════════════════════════════════════════════════════════════════
 def render_app():
-    # ── Top bar ──────────────────────────────────────────────────────────────
-    c1, c2, c3 = st.columns([1, 4, 1])
+    c1, c2, c3 = st.columns([2, 6, 2])
     with c1:
-        st.markdown('<div class="wordmark" style="padding:1rem 0 0.5rem">yt-<span>Z</span></div>',
-                    unsafe_allow_html=True)
+        st.markdown(f'<div style="padding:1rem 0 0.5rem">{wordmark()}</div>', unsafe_allow_html=True)
     with c3:
         st.markdown("<br>", unsafe_allow_html=True)
-        logout = ui.button("Logout", key="logout_btn", variant="outline")
-        if logout:
-            for k in ["token", "email", "jobs", "preview_info", "cookie_status"]:
-                if k in st.session_state:
-                    del st.session_state[k]
+        if st.button("Sign out", key="logout_btn"):
+            for k in ["token", "email", "jobs", "preview_info", "cookie_status", "dl_opts", "format_data"]:
+                st.session_state.pop(k, None)
             st.rerun()
 
-    # User badge
     if st.session_state.email:
+        mode = "demo" if st.session_state.token == "demo-token" else "live"
         st.markdown(
-            f'<span class="badge-mono">⬤&nbsp; {st.session_state.email}</span>',
-            unsafe_allow_html=True,
+            f'<div style="font-family:\'Geist Mono\',monospace;font-size:0.6875rem;color:hsl(var(--muted-foreground));padding-bottom:0.5rem">● {st.session_state.email} <span style="opacity:0.5">· {mode} mode</span></div>',
+            unsafe_allow_html=True
         )
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # ── Nav tabs ─────────────────────────────────────────────────────────────
-    active_jobs = live_queue_jobs()
-    tab_options = [
-        "Download",
-        f"Queue ({len(active_jobs)})" if active_jobs else "Queue",
-        "History",
-        "Settings",
-    ]
-    tab = ui.tabs(
-        options=tab_options,
-        default_value=tab_options[0],
-        key="main_tabs",
-    )
+    active_count = len([j for j in st.session_state.jobs.values() if j.get("status") in ("queued", "running")])
+    queue_label = f"Queue ({active_count})" if active_count else "Queue"
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    tabs = st.tabs(["Download", queue_label, "Formats", "History", "Settings"])
 
-    if "Download" in (tab or ""):
+    with tabs[0]:
         render_download_tab()
-    elif "Queue" in (tab or ""):
+    with tabs[1]:
         render_queue_tab()
-    elif "History" in (tab or ""):
+    with tabs[2]:
+        render_formats_tab()
+    with tabs[3]:
         render_history_tab()
-    elif "Settings" in (tab or ""):
+    with tabs[4]:
         render_settings_tab()
 
 
-# ── Download tab ──────────────────────────────────────────────────────────────
 def render_download_tab():
-    st.markdown('<div class="section-label">Video URL</div>', unsafe_allow_html=True)
+    section_heading("Video URL")
 
-    url = ui.input(
-        default_value="",
+    url = st.text_input(
+        "URL",
         placeholder="https://youtube.com/watch?v=  or playlist URL…",
-        type="text",
         key="dl_url",
     )
 
     col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
-        fmt = ui.select(
+        fmt = st.selectbox(
+            "Format",
             options=["mp4", "webm", "mkv", "mp3", "m4a", "best"],
-            label="Format",
             key="dl_format",
-        ) or "mp4"
+        )
     with col2:
         is_audio = fmt in ("mp3", "m4a")
-        quality_opts = (
-            ["audio"] if is_audio
-            else ["best", "4k", "1440p", "1080p", "720p", "480p"]
-        )
-        quality = ui.select(
+        quality_opts = ["audio"] if is_audio else ["best", "4k", "1440p", "1080p", "720p", "480p"]
+        quality = st.selectbox(
+            "Quality",
             options=quality_opts,
-            label="Quality",
             key="dl_quality",
-        ) or quality_opts[0]
+        )
     with col3:
         st.markdown("<br>", unsafe_allow_html=True)
-        playlist = ui.switch(
-            default_checked=False,
-            label="Playlist mode",
-            key="playlist_toggle",
-        )
+        playlist = st.checkbox("Playlist mode", key="playlist_toggle")
+
+    with st.expander("Advanced Options", expanded=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            embed_metadata = st.checkbox("Embed metadata", key="opt_embed_metadata")
+            embed_thumbnail = st.checkbox("Embed thumbnail", key="opt_embed_thumbnail")
+            write_subs = st.checkbox("Write subtitles", key="opt_write_subs")
+            extract_audio = st.checkbox("Extract audio only", key="opt_extract_audio")
+        with col2:
+            sponsorblock = st.selectbox(
+                "SponsorBlock",
+                options=[None, "mark", "remove"],
+                format_func=lambda x: "None" if x is None else x.capitalize(),
+                key="opt_sponsorblock",
+            )
+            rate_limit = st.text_input("Rate limit (e.g. 1M)", key="opt_rate_limit")
+            proxy_url = st.text_input("Proxy URL", key="opt_proxy_url")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    btn_col1, btn_col2, _ = st.columns([1, 1, 2])
+    btn_col1, btn_col2, btn_col3 = st.columns([1, 1, 2])
     with btn_col1:
-        preview_clicked = ui.button("Preview", key="preview_btn", variant="outline")
+        preview_clicked = st.button("Preview", key="preview_btn", use_container_width=True)
     with btn_col2:
-        dl_clicked = ui.button("⬇ Download", key="dl_btn", variant="default")
+        formats_clicked = st.button("List Formats", key="formats_btn", use_container_width=True)
+    with btn_col3:
+        dl_clicked = st.button("⬇ Download", key="dl_btn", use_container_width=True, type="primary")
 
-    # ── Preview ───────────────────────────────────────────────────────────────
     if preview_clicked:
         if not url:
-            ui.alert_dialog(
-                show=True, title="URL required",
-                description="Please enter a video URL first.",
-                confirm_label="OK", cancel_label="", key="url_required_dlg",
-            )
+            st.error("Please enter a URL.")
         else:
             with st.spinner("Fetching video info…"):
                 info, err = api_get_info(url)
@@ -723,8 +721,7 @@ def render_download_tab():
 
     if st.session_state.preview_info:
         info = st.session_state.preview_info
-        st.markdown('<div class="section-label" style="margin-top:1.5rem">Preview</div>',
-                    unsafe_allow_html=True)
+        st.markdown('<div class="sl-section">Preview</div>', unsafe_allow_html=True)
         p_col1, p_col2 = st.columns([1, 2])
         with p_col1:
             thumb = info.get("thumbnail")
@@ -732,32 +729,32 @@ def render_download_tab():
                 st.image(thumb, use_container_width=True)
         with p_col2:
             st.markdown(f"""
-            <div class="preview-body" style="padding:0">
-                <div class="preview-title">{info.get('title','Unknown')}</div>
-                <div class="preview-sub">
+            <div class="sl-card" style="padding:0">
+                <div class="sl-job-title">{info.get('title','Unknown')}</div>
+                <div class="sl-job-meta">
                     {info.get('uploader','—')} &nbsp;·&nbsp; {fmt_duration(info.get('duration'))}
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            # Format badges
-            fmts = info.get("formats", [])
-            if fmts:
-                heights = sorted(
-                    set(f["height"] for f in fmts if f.get("height")),
-                    reverse=True,
-                )[:6]
-                badges = " ".join(
-                    f'<span class="badge-mono">{h}p</span>' for h in heights
-                )
-                st.markdown(f"<br>{badges}", unsafe_allow_html=True)
 
-    # ── Start download ─────────────────────────────────────────────────────────
     if dl_clicked:
         if not url:
             st.error("Please enter a URL.")
         else:
+            opts = {
+                "format": fmt,
+                "quality": quality,
+                "playlist": playlist,
+                "embed_metadata": embed_metadata,
+                "embed_thumbnail": embed_thumbnail,
+                "write_subs": write_subs,
+                "extract_audio": extract_audio,
+                "sponsorblock": sponsorblock,
+                "rate_limit": rate_limit if rate_limit else None,
+                "proxy_url": proxy_url if proxy_url else None,
+            }
             with st.spinner("Queuing download…"):
-                job, err = api_start_download(url, fmt, quality, bool(playlist))
+                job, err = api_start_download(url, opts)
             if err:
                 st.error(f"Error: {err}")
             else:
@@ -767,72 +764,119 @@ def render_download_tab():
                 st.session_state.preview_info = None
 
 
-# ── Queue tab ─────────────────────────────────────────────────────────────────
 def render_queue_tab():
     active = live_queue_jobs()
 
     if not active:
-        st.markdown("""
-        <div style="text-align:center;padding:3rem 0;color:#444">
-            <div style="font-size:2rem;margin-bottom:0.5rem">⬜</div>
-            <div style="font-size:0.88rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Queue empty</div>
-            <div style="font-size:0.78rem;margin-top:0.25rem;color:#333">Start a download from the Download tab</div>
-        </div>
-        """, unsafe_allow_html=True)
+        empty_state("⬜", "Queue empty", "Start a download from the Download tab")
         return
 
-    st.markdown(f'<div class="section-label">{len(active)} active job{"s" if len(active)!=1 else ""}</div>',
-                unsafe_allow_html=True)
+    section_heading(f"{len(active)} active download{'s' if len(active)>1 else ''}")
 
     for job in active:
         jid = job["id"]
         status = job.get("status", "queued")
         progress = job.get("progress", 0.0)
+        detail = job.get("progress_detail", {})
 
-        with st.container():
+        meta_parts = [
+            status_badge(status),
+            badge(job.get("format", "?").upper()),
+            badge(job.get("quality", "?")),
+        ]
+        if job.get("playlist"):
+            meta_parts.append(badge("playlist", "warning"))
+
+        st.markdown(f"""
+        <div class="sl-job-card">
+          <div class="sl-job-title">{job.get('title') or 'Fetching title…'}</div>
+          <div class="sl-job-meta">
+            {''.join(meta_parts)}
+            <span style="opacity:0.5">{(job.get('url',''))[:60]}…</span>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if status == "running":
+            st.progress(min(int(progress), 100))
+            speed = fmt_speed(detail.get("speed"))
+            eta_raw = detail.get("eta")
+            eta = f"{int(eta_raw//60)}:{int(eta_raw%60):02d}" if eta_raw else "—"
+            downloaded = fmt_bytes(detail.get("downloaded_bytes"))
+            total = fmt_bytes(detail.get("total_bytes") or detail.get("total_bytes_estimate"))
             st.markdown(f"""
-            <div class="job-card">
-                <div class="job-title">{job.get('title') or 'Untitled'}</div>
-                <div class="job-url">{job.get('url','')}</div>
-                <div class="job-meta">
-                    {status_pill(status)}
-                    <span class="badge-mono">{job.get('format','?').upper()}</span>
-                    <span class="badge-mono">{job.get('quality','?')}</span>
-                </div>
+            <div class="sl-progress-detail">
+              <span>↓ {speed}</span>
+              <span>ETA {eta}</span>
+              <span>{downloaded} / {total}</span>
             </div>
             """, unsafe_allow_html=True)
+        elif status == "queued":
+            st.progress(0, text="Waiting…")
 
-            if status == "running":
-                st.progress(int(progress), text=f"{progress:.1f}%")
-            elif status == "queued":
-                st.progress(0, text="Waiting…")
+        c1, c2 = st.columns([1, 5])
+        with c1:
+            if st.button("Cancel", key=f"cancel_{jid}", use_container_width=True):
+                api_cancel_job(jid)
+                st.rerun()
 
-            c1, c2 = st.columns([1, 5])
-            with c1:
-                if ui.button("Cancel", key=f"cancel_{jid}", variant="outline"):
-                    api_cancel_job(jid)
-                    st.rerun()
-
-    # Auto-refresh while jobs are running
     running = any(j.get("status") == "running" for j in active)
     if running:
         time.sleep(1.5)
         st.rerun()
 
 
-# ── History tab ───────────────────────────────────────────────────────────────
+def render_formats_tab():
+    section_heading("Inspect Formats")
+
+    url = st.text_input("URL to inspect", placeholder="https://youtube.com/watch?v=...", key="formats_url")
+
+    if st.button("Fetch Formats", key="fetch_formats_btn"):
+        if not url:
+            st.error("Please enter a URL.")
+        else:
+            with st.spinner("Fetching formats…"):
+                try:
+                    import requests
+                    r = requests.get(
+                        f"{API_BASE}/api/formats",
+                        params={"url": url},
+                        headers={"Authorization": f"Bearer {st.session_state.token}"},
+                        timeout=30,
+                    )
+                    if r.status_code == 200:
+                        data = r.json()
+                        st.session_state.format_data = data
+                    else:
+                        st.error(f"Error: {r.json().get('detail', 'Failed')}")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+    if st.session_state.get("format_data"):
+        data = st.session_state.format_data
+        st.markdown(f"**{data.get('title', 'Unknown')}**")
+        st.markdown(f"_{data.get('uploader', '—')} · {fmt_duration(data.get('duration'))}_")
+
+        formats = data.get("formats", [])
+        video_fmts = [f for f in formats if f.get("is_video")]
+        audio_fmts = [f for f in formats if f.get("is_audio")]
+
+        if video_fmts:
+            section_heading("Video Formats")
+            st.dataframe(video_fmts, use_container_width=True)
+
+        if audio_fmts:
+            section_heading("Audio Formats")
+            st.dataframe(audio_fmts, use_container_width=True)
+
+
 def render_history_tab():
-    st.markdown('<div class="section-label">Download history</div>', unsafe_allow_html=True)
+    section_heading("Download history")
 
     jobs = api_get_history()
 
     if not jobs:
-        st.markdown("""
-        <div style="text-align:center;padding:3rem 0;color:#444">
-            <div style="font-size:2rem;margin-bottom:0.5rem">📂</div>
-            <div style="font-size:0.88rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase">No history yet</div>
-        </div>
-        """, unsafe_allow_html=True)
+        empty_state("📂", "No history yet", "Downloads will appear here")
         return
 
     for job in reversed(jobs):
@@ -842,14 +886,13 @@ def render_history_tab():
         finished = (job.get("finished_at") or "")[:16].replace("T", " ")
 
         st.markdown(f"""
-        <div class="job-card">
-            <div class="job-title">{title}</div>
-            <div class="job-url">{job.get('url','')}</div>
-            <div class="job-meta">
-                {status_pill(status)}
-                <span class="badge-mono">{job.get('format','?').upper()}</span>
-                <span class="badge-mono">{job.get('quality','?')}</span>
-                <span class="badge-mono" style="color:#444">{created}</span>
+        <div class="sl-job-card">
+            <div class="sl-job-title">{title}</div>
+            <div class="sl-job-meta">
+                {status_badge(status)}
+                <span class="sl-badge sl-badge-default">{job.get('format','?').upper()}</span>
+                <span class="sl-badge sl-badge-default">{job.get('quality','?')}</span>
+                <span style="opacity:0.5">{created}</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -859,23 +902,19 @@ def render_history_tab():
                 st.code(job["error_msg"], language=None)
 
 
-# ── Settings tab ──────────────────────────────────────────────────────────────
 def render_settings_tab():
-    st.markdown('<div class="section-label">Cookie Authentication</div>', unsafe_allow_html=True)
+    section_heading("Cookie Authentication")
 
     st.markdown("""
-    <div class="cookie-note">
-    🍪 &nbsp;<strong>Why cookies?</strong> Some platforms (YouTube members-only, age-restricted content)
-    require authentication. Export your browser cookies as a <code>cookies.txt</code> (Netscape format) 
-    using a browser extension like <em>Get cookies.txt</em>, then upload it here.
+    <div class="sl-card">
+    🍪 Some platforms require authentication cookies. Export your browser cookies as a <code>cookies.txt</code> (Netscape format) using a browser extension like <em>Get cookies.txt</em>, then upload it here.
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<div class="section-label">Upload cookies.txt</div>', unsafe_allow_html=True)
 
     uploaded = st.file_uploader(
-        "cookies.txt",
+        "Upload cookies.txt",
         type=["txt"],
         key="cookie_upload",
         help="Netscape HTTP Cookie File format",
@@ -885,79 +924,30 @@ def render_settings_tab():
     if uploaded:
         col1, _ = st.columns([1, 3])
         with col1:
-            if ui.button("Upload cookies", key="upload_cookie_btn", variant="default"):
+            if st.button("Upload cookies", key="upload_cookie_btn", use_container_width=True, type="primary"):
                 ok, msg = api_upload_cookies(uploaded.read())
-                st.session_state.cookie_status = (ok, msg)
-
-    if st.session_state.cookie_status:
-        ok, msg = st.session_state.cookie_status
-        if ok:
-            ui.alert_dialog(
-                show=True, title="Cookies uploaded",
-                description=msg,
-                confirm_label="OK", cancel_label="",
-                key="cookie_ok_dlg",
-            )
-            st.session_state.cookie_status = None
-        else:
-            st.warning(msg)
+                if ok:
+                    st.success(msg)
+                else:
+                    st.warning(msg)
 
     st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown('<div class="section-label">Bookmarklet (YouTube auto-sync)</div>', unsafe_allow_html=True)
-
-    bookmarklet_code = """javascript:(function(){
-  var cs=document.cookie.split(';').map(c=>{var p=c.trim().split('=');return{name:p[0],value:p.slice(1).join('='),domain:location.hostname,path:'/',secure:true};});
-  fetch('http://localhost:8000/api/settings/cookies/youtube',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer TOKEN'},body:JSON.stringify({cookies:cs})}).then(r=>r.json()).then(d=>alert('yt-Z: '+d.message)).catch(e=>alert('Error: '+e));
-})();"""
-
-    st.code(bookmarklet_code, language="javascript")
-    st.markdown("""
-    <p style="font-size:0.78rem;color:#555;line-height:1.6;">
-    Replace <code>TOKEN</code> with your Bearer token, then drag this snippet to your bookmarks bar.
-    Click it while on YouTube to automatically sync your session cookies.
-    </p>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown('<div class="section-label">Session</div>', unsafe_allow_html=True)
+    section_heading("Session")
 
     cols = st.columns(4)
     with cols[0]:
-        ui.metric_card(
-            title="User",
-            content=st.session_state.email or "—",
-            description="Logged in",
-            key="metric_user",
-        )
+        st.metric("User", st.session_state.email or "—")
     with cols[1]:
         total = len(st.session_state.jobs)
-        ui.metric_card(
-            title="Total jobs",
-            content=str(total),
-            description="this session",
-            key="metric_jobs",
-        )
+        st.metric("Total jobs", total)
     with cols[2]:
         done = sum(1 for j in st.session_state.jobs.values() if j.get("status") == "done")
-        ui.metric_card(
-            title="Completed",
-            content=str(done),
-            description="downloads",
-            key="metric_done",
-        )
+        st.metric("Completed", done)
     with cols[3]:
         mode = "Demo" if st.session_state.token == "demo-token" else "Live"
-        ui.metric_card(
-            title="Mode",
-            content=mode,
-            description="API connection",
-            key="metric_mode",
-        )
+        st.metric("Mode", mode)
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  ROUTER
-# ════════════════════════════════════════════════════════════════════════════
 if not st.session_state.token:
     render_auth()
 else:
