@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/Isuruzenith/Streamline/compare/v0.4.0...v0.5.0) (2026-04-05)
+
+
+### Features
+
+* enhance download options and add format fetching functionality ([23484cf](https://github.com/Isuruzenith/Streamline/commit/23484cfe1f4387c1eb50e60ca63e5ca94e90fe87))
+
 ## [0.4.0](https://github.com/Isuruzenith/yt-Z-downloader/compare/v0.3.0...v0.4.0) (2026-04-03)
 
 
