@@ -1,0 +1,199 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: "DM Sans", sans-serif;
+    background: #141414;
+    color: #e8e3db;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(212, 196, 166, 0.15);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 196, 166, 0.25);
+  }
+
+  /* Selection */
+  ::selection {
+    background: rgba(212, 196, 166, 0.2);
+    color: #e8e3db;
+  }
+}
+
+@layer components {
+  /* Card component */
+  .sl-card {
+    @apply bg-surface border border-border rounded-md p-4.5 transition-colors duration-150;
+  }
+
+  .sl-card:hover {
+    @apply bg-surface-hover;
+  }
+
+  .sl-card-accent {
+    @apply bg-accent-glow border-border-accent;
+  }
+
+  /* Badge component */
+  .sl-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium font-mono tracking-wide;
+  }
+
+  .sl-badge-default {
+    background: rgba(142, 142, 160, 0.12);
+    color: #8e8ea0;
+  }
+
+  .sl-badge-green {
+    @apply bg-status-green-bg text-status-green;
+  }
+
+  .sl-badge-orange {
+    @apply bg-status-orange-bg text-status-orange;
+  }
+
+  .sl-badge-red {
+    @apply bg-status-red-bg text-status-red;
+  }
+
+  .sl-badge-blue {
+    @apply bg-status-blue-bg text-status-blue;
+  }
+
+  /* Input */
+  .sl-input {
+    @apply w-full bg-surface border border-border rounded-md px-4 py-3 text-base text-text-primary
+      font-sans placeholder:text-text-dim
+      focus:outline-none focus:border-border-accent
+      transition-colors duration-150;
+  }
+
+  /* Button */
+  .sl-btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md font-sans font-medium text-base
+      transition-all duration-200 cursor-pointer
+      disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .sl-btn-primary {
+    @apply bg-accent text-background hover:brightness-110 active:brightness-95;
+  }
+
+  .sl-btn-ghost {
+    @apply bg-transparent text-text-muted border border-transparent
+      hover:bg-surface-hover hover:text-text-secondary;
+  }
+
+  .sl-btn-outline {
+    @apply bg-transparent text-text-muted border border-border
+      hover:border-border-accent hover:text-text-secondary;
+  }
+
+  /* Section label */
+  .sl-section-label {
+    @apply flex items-center gap-2 text-xs font-mono text-text-dim uppercase tracking-widest mb-4 mt-7;
+  }
+
+  .sl-section-label::before {
+    content: "";
+    @apply inline-block w-5 h-px bg-text-dim opacity-40;
+  }
+
+  /* Code inline */
+  .sl-code {
+    @apply font-mono text-sm text-accent bg-accent-soft px-1.5 py-0.5 rounded-2sm;
+  }
+
+  /* Progress bar */
+  .sl-progress {
+    @apply relative h-1.5 bg-surface rounded-full overflow-hidden;
+  }
+
+  .sl-progress-fill {
+    @apply absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out;
+    background: linear-gradient(90deg, #d4c4a6, #e8dcc8);
+  }
+
+  .sl-progress-indeterminate {
+    @apply absolute inset-y-0 rounded-full;
+    background: linear-gradient(90deg, transparent, #d4c4a6, transparent);
+    background-size: 200% 100%;
+    animation: progressBar 1.5s ease-in-out infinite;
+  }
+
+  /* Collapsible log */
+  .sl-log {
+    @apply w-full bg-[#0d0d0d] border border-border-accent rounded-md p-4 font-mono text-sm text-text-dim
+      leading-relaxed overflow-auto max-h-64 resize-y;
+  }
+
+  /* Status dot */
+  .sl-dot {
+    @apply inline-block w-2 h-2 rounded-full;
+  }
+
+  .sl-dot-green {
+    @apply bg-status-green shadow-[0_0_6px_rgba(16,185,129,0.4)];
+  }
+
+  .sl-dot-red {
+    @apply bg-status-red shadow-[0_0_6px_rgba(239,68,68,0.4)];
+  }
+
+  .sl-dot-orange {
+    @apply bg-status-orange shadow-[0_0_6px_rgba(245,158,11,0.4)];
+  }
+
+  /* Sidebar nav item */
+  .sl-nav-item {
+    @apply w-full flex items-center gap-2.5 px-4 py-2 border-l-2 border-transparent
+      text-sm+ text-nav transition-all duration-150 cursor-pointer select-none;
+  }
+
+  .sl-nav-item:hover {
+    @apply bg-surface-hover text-text-secondary;
+  }
+
+  .sl-nav-item-active {
+    @apply bg-surface-active text-nav-active border-l-accent font-medium;
+  }
+
+  .sl-nav-item-active .sl-nav-icon {
+    @apply text-nav-icon-active;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
