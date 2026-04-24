@@ -13,7 +13,7 @@ import { dirname } from "path";
 export function downloadRoutes(app) {
   // Queue a new download
   app.post("/api/download", async ({ body }) => {
-    const { url, formatId, preset, downloadId, title, thumbnail, outputPath, filenameTemplate, cookieBrowser } = body;
+    const { url, formatId, preset, downloadId, title, thumbnail, outputPath, filenameTemplate } = body;
 
     if (!url) {
       return new Response(
@@ -39,7 +39,6 @@ export function downloadRoutes(app) {
         preset: preset || "best",
         outputPath: outputPath || null,
         filenameTemplate: filenameTemplate || null,
-        cookieBrowser: cookieBrowser || null,
       });
 
       return { success: true, ...result };

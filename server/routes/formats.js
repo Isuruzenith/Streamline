@@ -9,7 +9,6 @@ import { getFormats, detectPlaylist, getPlaylistInfo } from "../services/ytdlp.j
 export function formatsRoutes(app) {
   app.get("/api/formats", async ({ query }) => {
     const url = query.url;
-    const cookieBrowser = query.cookieBrowser || null;
 
     if (!url) {
       return new Response(
@@ -20,15 +19,15 @@ export function formatsRoutes(app) {
 
     try {
       // First check if it's a playlist
-      const isPlaylist = await detectPlaylist(url, { cookieBrowser });
+      const isPlaylist = await detectPlaylist(url);
 
       if (isPlaylist) {
-        const playlistInfo = await getPlaylistInfo(url, { cookieBrowser });
+        const playlistInfo = await getPlaylistInfo(url);
         return playlistInfo;
       }
 
       // Single video
-      const info = await getFormats(url, { cookieBrowser });
+      const info = await getFormats(url);
       return info;
     } catch (err) {
       return new Response(

@@ -40,12 +40,9 @@ const useStore = create((set, get) => ({
   setMediaUrl: (url) => set({ mediaUrl: url }),
 
   fetchMediaInfo: async (url) => {
-    set({ mediaLoading: true, mediaError: null, mediaInfo: null });
+    set({ mediaLoading: true, mediaError: null, mediaInfo: null, selectedFormatId: null, selectedPreset: "best" });
     try {
-      const cookieBrowser = get().cookieBrowser;
-      let apiUrl = `/api/formats?url=${encodeURIComponent(url)}`;
-      if (cookieBrowser) apiUrl += `&cookieBrowser=${encodeURIComponent(cookieBrowser)}`;
-      const res = await fetch(apiUrl);
+      const res = await fetch(`/api/formats?url=${encodeURIComponent(url)}`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Failed to fetch media info" }));
         throw new Error(err.error || `HTTP ${res.status}`);
@@ -58,7 +55,7 @@ const useStore = create((set, get) => ({
   },
 
   clearMedia: () =>
-    set({ mediaUrl: "", mediaInfo: null, mediaLoading: false, mediaError: null }),
+    set({ mediaUrl: "", mediaInfo: null, mediaLoading: false, mediaError: null, selectedFormatId: null, selectedPreset: "best" }),
 
   // ─── Selected Format ──────────────────────────────────────
   selectedFormatId: null, // will default to "best" or a specific format_id
@@ -76,7 +73,7 @@ const useStore = create((set, get) => ({
   activeDownloadId: null,
 
   startDownload: async (overrideUrl, overrideTitle, overrideThumbnail) => {
-    const { mediaInfo, mediaUrl, selectedFormatId, selectedPreset, outputPath, filenameTemplate, cookieBrowser } = get();
+    const { mediaInfo, mediaUrl, selectedFormatId, selectedPreset, outputPath, filenameTemplate } = get();
 
     const url = overrideUrl || mediaUrl;
     const title = overrideTitle || mediaInfo?.title || "Untitled";
@@ -115,7 +112,6 @@ const useStore = create((set, get) => ({
           thumbnail,
           outputPath: outputPath || null,
           filenameTemplate: filenameTemplate || null,
-          cookieBrowser: cookieBrowser || null,
         }),
       });
       if (!res.ok) {
@@ -272,11 +268,9 @@ const useStore = create((set, get) => ({
   // ─── Settings ─────────────────────────────────────────────
   outputPath: "",
   filenameTemplate: "%(title)s.%(ext)s",
-  cookieBrowser: "", // "chrome" | "firefox" | "edge" | "brave" | "opera" | ""
 
   setOutputPath: (path) => set({ outputPath: path }),
   setFilenameTemplate: (tpl) => set({ filenameTemplate: tpl }),
-  setCookieBrowser: (browser) => set({ cookieBrowser: browser }),
 }));
 
 export default useStore;

@@ -1,5 +1,16 @@
-import { useState } from "react";
-import { FolderOpen, FileText, Cookie, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  FolderOpen,
+  FileText,
+  Cookie,
+  Upload,
+  CheckCircle2,
+  AlertTriangle,
+  Trash2,
+  ExternalLink,
+  ShieldAlert,
+  Loader2,
+} from "lucide-react";
 import useStore from "@/hooks/useStore";
 import EnvironmentPanel from "@/components/EnvironmentPanel";
 import { cn } from "@/lib/utils";
@@ -9,17 +20,6 @@ const TABS = [
   { id: "environment", label: "Environment" },
 ];
 
-const BROWSERS = [
-  { id: "", label: "None (no cookies)" },
-  { id: "chrome", label: "Google Chrome" },
-  { id: "firefox", label: "Firefox" },
-  { id: "edge", label: "Microsoft Edge" },
-  { id: "brave", label: "Brave" },
-  { id: "opera", label: "Opera" },
-  { id: "chromium", label: "Chromium" },
-  { id: "vivaldi", label: "Vivaldi" },
-];
-
 export default function SettingsPage() {
   const settingsTab = useStore((s) => s.settingsTab);
   const setSettingsTab = useStore((s) => s.setSettingsTab);
@@ -27,39 +27,92 @@ export default function SettingsPage() {
   const setOutputPath = useStore((s) => s.setOutputPath);
   const filenameTemplate = useStore((s) => s.filenameTemplate);
   const setFilenameTemplate = useStore((s) => s.setFilenameTemplate);
-  const cookieBrowser = useStore((s) => s.cookieBrowser);
-  const setCookieBrowser = useStore((s) => s.setCookieBrowser);
   const showToast = useStore((s) => s.showToast);
 
-  const [cookieExporting, setCookieExporting] = useState(false);
-  const [cookieExported, setCookieExported] = useState(false);
+  const [cookieStatus, setCookieStatus] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef(null);
 
-  const handleExportCookies = async () => {
-    if (!cookieBrowser) return;
-    setCookieExporting(true);
-    setCookieExported(false);
+  // Fetch cookie status on mount
+  useEffect(() => {
+    fetchCookieStatus();
+  }, []);
+
+  const fetchCookieStatus = async () => {
     try {
-      const res = await fetch("/api/cookies/export", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ browser: cookieBrowser }),
-      });
+      const res = await fetch("/api/settings/cookies");
       const data = await res.json();
-      if (res.ok && data.success) {
-        setCookieExported(true);
-        showToast("Cookies exported successfully!", "success");
-      } else {
-        showToast(
-          `Cookie export failed: ${data.error || "unknown error"}. Try closing ${BROWSERS.find((b) => b.id === cookieBrowser)?.label} first.`,
-          "error"
-        );
-      }
-    } catch (err) {
-      showToast(`Cookie export failed: ${err.message}`, "error");
-    } finally {
-      setCookieExporting(false);
+      setCookieStatus(data);
+    } catch {
+      setCookieStatus(null);
     }
   };
+
+  const handleFileUpload = async (file) => {
+    if (!file) return;
+    if (!file.name.endsWith(".txt")) {
+      showToast("Please select a .txt file", "error");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/settings/cookies", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        showToast("cookies.txt uploaded successfully!", "success");
+        fetchCookieStatus();
+      } else {
+        showToast(data.error || "Upload failed", "error");
+      }
+    } catch (err) {
+      showToast(`Upload failed: ${err.message}`, "error");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const res = await fetch("/api/settings/cookies", { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        showToast("cookies.txt removed", "success");
+        setCookieStatus({ exists: false });
+      }
+    } catch (err) {
+      showToast(`Failed to delete: ${err.message}`, "error");
+    }
+  };
+
+  // Drag & Drop handlers
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleFileUpload(file);
+  }, []);
 
   return (
     <div>
@@ -138,7 +191,6 @@ export default function SettingsPage() {
               <code className="sl-code text-2xs">%(ext)s</code>,{" "}
               <code className="sl-code text-2xs">%(uploader)s</code>, etc.
             </p>
-            {/* Live preview */}
             <div className="mt-2 p-2.5 bg-surface rounded border border-border">
               <div className="text-xs font-mono text-text-dim">Preview:</div>
               <div className="text-sm font-mono text-text-muted mt-1">
@@ -151,74 +203,147 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Cookie browser */}
-          <div>
-            <label className="block text-sm font-semibold text-text-secondary font-serif mb-2">
+          {/* ─── Cookie Authentication Section ─────────────────────── */}
+          <div className="pt-2">
+            <label className="block text-sm font-semibold text-text-secondary font-serif mb-3">
               <span className="flex items-center gap-2">
                 <Cookie size={14} className="text-accent" />
-                Browser cookies
+                Cookie authentication
               </span>
             </label>
-            <div className="flex gap-2">
-              <select
-                value={cookieBrowser}
-                onChange={(e) => {
-                  setCookieBrowser(e.target.value);
-                  setCookieExported(false);
-                }}
-                className="sl-input flex-1 cursor-pointer"
-              >
-                {BROWSERS.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.label}
-                  </option>
-                ))}
-              </select>
-              {cookieBrowser && (
-                <button
-                  onClick={handleExportCookies}
-                  disabled={cookieExporting}
-                  className="sl-btn sl-btn-outline text-sm whitespace-nowrap"
-                >
-                  {cookieExporting ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      Exporting...
-                    </>
-                  ) : cookieExported ? (
-                    <>
-                      <CheckCircle2 size={14} className="text-status-green" />
-                      Exported
-                    </>
-                  ) : (
-                    <>
-                      <Cookie size={14} />
-                      Export cookies
-                    </>
+
+            {/* Instructions */}
+            <div className="p-4 bg-surface rounded-lg border border-border space-y-3 mb-4">
+              <p className="text-sm text-text-muted leading-relaxed">
+                To download authenticated or age-restricted content, you must provide a{" "}
+                <code className="sl-code text-2xs">cookies.txt</code> file.
+              </p>
+
+              <div className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <span className="text-xs text-text-dim mt-0.5 font-mono shrink-0">Chrome/Edge</span>
+                  <p className="text-sm text-text-muted">
+                    Install the{" "}
+                    <a
+                      href="https://chromewebstore.google.com/detail/cclelndahbckbenkjhflpdbgdldlbecc"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent hover:text-accent/80 underline underline-offset-2 inline-flex items-center gap-1"
+                    >
+                      Get cookies.txt LOCALLY
+                      <ExternalLink size={10} />
+                    </a>{" "}
+                    extension.
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-xs text-text-dim mt-0.5 font-mono shrink-0">Firefox</span>
+                  <p className="text-sm text-text-muted">
+                    Install the{" "}
+                    <a
+                      href="https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent hover:text-accent/80 underline underline-offset-2 inline-flex items-center gap-1"
+                    >
+                      cookies.txt
+                      <ExternalLink size={10} />
+                    </a>{" "}
+                    extension.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs text-text-dim leading-relaxed">
+                After installing, visit the website you want to download from, log in, then export cookies for that site.
+              </p>
+            </div>
+
+            {/* Security Warning */}
+            <div className="p-3.5 bg-status-red/5 rounded-lg border border-status-red/20 mb-4">
+              <div className="flex items-start gap-2.5">
+                <ShieldAlert size={16} className="text-status-red shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-status-red mb-1">Security warning</p>
+                  <p className="text-xs text-status-red/80 leading-relaxed">
+                    If you have previously installed an extension called exactly{" "}
+                    <strong>"Get cookies.txt"</strong> (without the word "LOCALLY"),
+                    uninstall it immediately. It has been reported as malware and removed from the Chrome Web Store.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Current status */}
+            {cookieStatus?.exists && (
+              <div className="p-3 bg-status-green-bg rounded-lg border border-status-green/20 mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={14} className="text-status-green" />
+                  <span className="text-sm text-status-green">
+                    cookies.txt active
+                  </span>
+                  {cookieStatus.uploadedAt && (
+                    <span className="text-xs text-text-dim">
+                      · uploaded {new Date(cookieStatus.uploadedAt).toLocaleDateString()}
+                    </span>
                   )}
+                </div>
+                <button
+                  onClick={handleDelete}
+                  className="p-1.5 rounded text-text-dim hover:text-status-red hover:bg-status-red/10 transition-colors"
+                  title="Remove cookies.txt"
+                >
+                  <Trash2 size={14} />
                 </button>
+              </div>
+            )}
+
+            {/* Upload zone */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200",
+                dragging
+                  ? "border-accent bg-accent/5 scale-[1.01]"
+                  : "border-border hover:border-border-accent hover:bg-surface-hover",
+                uploading && "opacity-60 pointer-events-none"
+              )}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt"
+                onChange={(e) => handleFileUpload(e.target.files?.[0])}
+                className="hidden"
+              />
+
+              {uploading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 size={28} className="animate-spin text-accent" />
+                  <span className="text-sm text-text-muted">Uploading...</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <div className={cn(
+                    "w-12 h-12 rounded-full flex items-center justify-center transition-colors",
+                    dragging ? "bg-accent/10" : "bg-surface"
+                  )}>
+                    <Upload size={20} className={dragging ? "text-accent" : "text-text-dim"} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-text-muted font-medium">
+                      {cookieStatus?.exists ? "Replace" : "Upload"} cookies.txt
+                    </p>
+                    <p className="text-xs text-text-dim mt-1">
+                      Drag & drop or click to browse
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
-            <p className="mt-1.5 text-xs text-text-dim">
-              Required for YouTube and other sites that block bots.
-              Select your browser and click <strong>Export cookies</strong> to save them.
-            </p>
-            {cookieBrowser && !cookieExported && (
-              <div className="mt-2 p-2.5 bg-status-orange-bg rounded border border-status-orange/20">
-                <div className="text-xs text-status-orange leading-relaxed">
-                  <strong>Tip:</strong> If export fails, try closing {BROWSERS.find((b) => b.id === cookieBrowser)?.label} first.
-                  Chrome/Edge lock their cookie database while running.
-                </div>
-              </div>
-            )}
-            {cookieExported && (
-              <div className="mt-2 p-2.5 bg-status-green-bg rounded border border-status-green/20">
-                <div className="text-xs text-status-green flex items-center gap-1.5">
-                  <CheckCircle2 size={11} />
-                  Cookies exported from <strong>{BROWSERS.find((b) => b.id === cookieBrowser)?.label}</strong> — ready to use
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

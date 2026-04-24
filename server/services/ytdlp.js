@@ -5,12 +5,11 @@ import { getCookieArgs } from "./cookies.js";
  * Detect whether a URL is a playlist.
  * Uses --flat-playlist --dump-json which outputs one JSON line per entry.
  */
-export async function detectPlaylist(url, { cookieBrowser } = {}) {
+export async function detectPlaylist(url) {
   const ytdlpBin = resolveYtdlpBin();
 
   // Quick check: use --flat-playlist to see if multiple entries exist
-  const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings"];
-  if (cookieBrowser) args.push(...getCookieArgs(cookieBrowser));
+  const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings", "--no-check-formats", ...getCookieArgs()];
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -39,11 +38,10 @@ export async function detectPlaylist(url, { cookieBrowser } = {}) {
  * Fetch playlist info with all entries.
  * Returns: { is_playlist, playlist_title, playlist_count, entries[] }
  */
-export async function getPlaylistInfo(url, { cookieBrowser } = {}) {
+export async function getPlaylistInfo(url) {
   const ytdlpBin = resolveYtdlpBin();
 
-  const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings"];
-  if (cookieBrowser) args.push("--cookies-from-browser", cookieBrowser);
+  const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings", ...getCookieArgs()];
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -108,11 +106,10 @@ export async function getPlaylistInfo(url, { cookieBrowser } = {}) {
  * Fetch media info / formats for a given URL using yt-dlp --dump-json.
  * Returns parsed JSON with title, thumbnail, duration, formats array, etc.
  */
-export async function getFormats(url, { cookieBrowser } = {}) {
+export async function getFormats(url) {
   const ytdlpBin = resolveYtdlpBin();
 
-  const args = [ytdlpBin, "--dump-json", "--no-warnings", "--no-playlist"];
-  if (cookieBrowser) args.push(...getCookieArgs(cookieBrowser));
+  const args = [ytdlpBin, "--dump-json", "--no-warnings", "--no-playlist", "--no-check-formats", ...getCookieArgs()];
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -194,7 +191,6 @@ export function startDownload({
   preset,
   outputPath,
   filenameTemplate,
-  cookieBrowser,
   onProgress,
   onMerging,
   onComplete,
@@ -203,12 +199,7 @@ export function startDownload({
 }) {
   const ytdlpBin = resolveYtdlpBin();
 
-  const args = [ytdlpBin, "--newline", "--no-warnings"];
-
-  // Cookie authentication
-  if (cookieBrowser) {
-    args.push(...getCookieArgs(cookieBrowser));
-  }
+  const args = [ytdlpBin, "--newline", "--no-warnings", "--no-check-formats", ...getCookieArgs()];
 
   // Format selection
   if (formatId) {
@@ -216,19 +207,19 @@ export function startDownload({
   } else if (preset) {
     switch (preset) {
       case "best":
-        args.push("-f", "bestvideo+bestaudio/best");
+        args.push("-f", "bv*+ba/b");
         break;
       case "1080p":
-        args.push("-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]");
+        args.push("-f", "bv*[height<=1080]+ba/b[height<=1080]/b");
         break;
       case "720p":
-        args.push("-f", "bestvideo[height<=720]+bestaudio/best[height<=720]");
+        args.push("-f", "bv*[height<=720]+ba/b[height<=720]/b");
         break;
       case "audio":
         args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
         break;
       default:
-        args.push("-f", "bestvideo+bestaudio/best");
+        args.push("-f", "bv*+ba/b");
     }
   }
 
