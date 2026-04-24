@@ -4,40 +4,35 @@ import { downloadQueue } from "../services/queue.js";
  * WebSocket handler — manages connected clients and broadcasts
  * download queue events to all of them.
  */
-class WebSocketManager {
-  constructor() {
-    this.clients = new Set();
+export const wsManager = {
+  clients: new Set(),
 
+  init() {
     // Subscribe to queue events and broadcast
     downloadQueue.subscribe((event) => {
       this.broadcast(event);
     });
-  }
+  },
 
   addClient(ws) {
     this.clients.add(ws);
-    console.log(`[ws] client connected (${this.clients.size} total)`);
+  },
 
-    ws.addEventListener("close", () => {
-      this.clients.delete(ws);
-      console.log(`[ws] client disconnected (${this.clients.size} total)`);
-    });
-
-    ws.addEventListener("error", () => {
-      this.clients.delete(ws);
-    });
-  }
+  removeClient(ws) {
+    this.clients.delete(ws);
+  },
 
   broadcast(data) {
-    const message = JSON.stringify(data);
+    const msg = typeof data === "string" ? data : JSON.stringify(data);
     for (const client of this.clients) {
       try {
-        client.send(message);
+        client.send(msg);
       } catch {
-        this.clients.delete(client);
+        this.clients.delete(client); // auto-clean dead sockets
       }
     }
-  }
-}
+  },
+};
 
-export const wsManager = new WebSocketManager();
+// Initialize subscription
+wsManager.init();

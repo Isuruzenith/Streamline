@@ -22,7 +22,11 @@ export default function FormatPicker() {
 
   // Group formats: video (with both) and audio-only
   const formats = (mediaInfo.formats || []).filter(
-    (f) => f.format_id && (f.vcodec !== "none" || f.acodec !== "none")
+    (f) =>
+      f.format_id &&
+      (f.vcodec !== "none" || f.acodec !== "none") &&
+      f.ext !== "mhtml" && // storyboard
+      (f.vcodec !== "none" || f.acodec !== "none") // redundant but explicit
   );
 
   const videoFormats = formats
@@ -172,6 +176,12 @@ function FormatRow({ format, isSelected, onSelect, type }) {
       >
         {type === "video" ? `${height}p` : `${abr || "?"}k`}
       </span>
+
+      {type === "video" && format.acodec === "none" && (
+        <span className="text-2xs font-mono text-text-dim bg-surface px-1 rounded" title="Video only — requires ffmpeg to merge audio">
+          +audio
+        </span>
+      )}
 
       {/* Codec */}
       <span className="text-xs font-mono text-text-dim w-20 truncate">

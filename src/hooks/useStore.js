@@ -45,7 +45,9 @@ const useStore = create((set, get) => ({
       const res = await fetch(`/api/formats?url=${encodeURIComponent(url)}`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Failed to fetch media info" }));
-        throw new Error(err.error || `HTTP ${res.status}`);
+        const message = err.error || `HTTP ${res.status}`;
+        const detail = err.detail ? ` — ${err.detail}` : "";
+        throw new Error(message + detail);
       }
       const data = await res.json();
       set({ mediaInfo: data, mediaLoading: false, mediaUrl: url });
@@ -99,6 +101,15 @@ const useStore = create((set, get) => ({
 
     set((s) => ({ downloads: [...s.downloads, download], activeDownloadId: id }));
 
+    const selectedFormat = selectedFormatId
+      ? mediaInfo?.formats?.find(f => f.format_id === selectedFormatId)
+      : null;
+    const formatType = selectedFormat
+      ? (selectedFormat.vcodec !== "none" && selectedFormat.acodec === "none" ? "video"
+         : selectedFormat.vcodec === "none" ? "audio"
+         : "av")
+      : null;
+
     try {
       const res = await fetch("/api/download", {
         method: "POST",
@@ -106,6 +117,7 @@ const useStore = create((set, get) => ({
         body: JSON.stringify({
           url,
           formatId: overrideUrl ? null : selectedFormatId,
+          formatType: overrideUrl ? null : formatType,
           preset: overrideUrl ? "best" : (selectedPreset || "best"),
           downloadId: id,
           title,

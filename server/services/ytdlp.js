@@ -10,13 +10,13 @@ export async function detectPlaylist(url) {
 
   // Quick check: use --flat-playlist to see if multiple entries exist
   const pythonBin = resolvePythonBin();
-  const args = [pythonBin, "-m", "yt_dlp", "--flat-playlist", "--dump-json", "--no-warnings", "--no-check-formats", ...getCookieArgs()];
+  const args = [pythonBin, "-m", "yt_dlp", "--flat-playlist", "--dump-json", "--no-warnings", ...getCookieArgs()];
   args.push(url);
 
   const proc = Bun.spawn(args, {
-      stdout: "pipe",
-      stderr: "pipe",
-    }
+    stdout: "pipe",
+    stderr: "pipe",
+  }
   );
 
   const stdout = await new Response(proc.stdout).text();
@@ -47,9 +47,9 @@ export async function getPlaylistInfo(url) {
   args.push(url);
 
   const proc = Bun.spawn(args, {
-      stdout: "pipe",
-      stderr: "pipe",
-    }
+    stdout: "pipe",
+    stderr: "pipe",
+  }
   );
 
   const [stdout, stderr] = await Promise.all([
@@ -112,13 +112,13 @@ export async function getFormats(url) {
   const ytdlpBin = resolveYtdlpBin();
 
   const pythonBin = resolvePythonBin();
-  const args = [pythonBin, "-m", "yt_dlp", "--dump-json", "--no-warnings", "--no-playlist", "--no-check-formats", ...getCookieArgs()];
+  const args = [pythonBin, "-m", "yt_dlp", "--dump-json", "--no-warnings", "--no-playlist", ...getCookieArgs()];
   args.push(url);
 
   const proc = Bun.spawn(args, {
-      stdout: "pipe",
-      stderr: "pipe",
-    }
+    stdout: "pipe",
+    stderr: "pipe",
+  }
   );
 
   const [stdout, stderr] = await Promise.all([
@@ -129,12 +129,18 @@ export async function getFormats(url) {
   const exitCode = await proc.exited;
 
   if (exitCode !== 0) {
-    // Extract meaningful error from stderr
+    // Include WARNING lines too — they often explain the real problem
     const errorLines = stderr
       .split("\n")
-      .filter((l) => l.includes("ERROR"))
-      .join("; ");
-    throw new Error(errorLines || stderr.trim() || "yt-dlp failed");
+      .filter((l) => l.includes("ERROR") || l.includes("WARNING"))
+      .map(l => l.replace(/^\s*\[.*?\]\s*/, "").trim())
+      .filter(Boolean)
+      .join(" | ");
+    const message = errorLines || stderr.trim() || "yt-dlp failed with no output";
+    const err = new Error(message);
+    err.stderr = stderr;
+    err.exitCode = exitCode;
+    throw err;
   }
 
   try {
@@ -191,6 +197,7 @@ export async function getFormats(url) {
 export function startDownload({
   url,
   formatId,
+  formatType,
   preset,
   outputPath,
   filenameTemplate,
@@ -209,7 +216,6 @@ export function startDownload({
     "yt_dlp",
     "--newline",
     "--no-warnings",
-    "--no-check-formats",
     "--no-mtime",
     "--windows-filenames", // Sanitize filenames for Windows
     "--trim-filenames", "100", // Avoid MAX_PATH issues
@@ -223,23 +229,31 @@ export function startDownload({
 
   // Format selection
   if (formatId) {
-    args.push("-f", formatId);
+    // If the user selected a video-only format, automatically merge with best audio.
+    if (formatType === "video") {
+      // video-only stream: merge with best available audio
+      args.push("-f", `${formatId}+bestaudio/bestvideo+bestaudio/best`);
+    } else {
+      args.push("-f", formatId);
+    }
   } else if (preset) {
     switch (preset) {
       case "best":
-        args.push("-f", "bv*+ba/b");
+        // bestvideo+bestaudio, merge → fallback to single best
+        args.push("-f", "bestvideo+bestaudio/best");
         break;
       case "1080p":
-        args.push("-f", "bv*[height<=1080]+ba/b[height<=1080]/b");
+        // best video ≤1080p + best audio → fallback to single stream ≤1080p → best
+        args.push("-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best");
         break;
       case "720p":
-        args.push("-f", "bv*[height<=720]+ba/b[height<=720]/b");
+        args.push("-f", "bestvideo[height<=720]+bestaudio/best[height<=720]/best");
         break;
       case "audio":
         args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
         break;
       default:
-        args.push("-f", "bv*+ba/b");
+        args.push("-f", "bestvideo+bestaudio/best");
     }
   }
 

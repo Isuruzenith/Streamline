@@ -38,13 +38,14 @@ class DownloadQueue {
   /**
    * Add a download job to the queue.
    */
-  add({ downloadId, url, title, thumbnail, formatId, preset, outputPath, filenameTemplate }) {
+  add({ downloadId, url, title, thumbnail, formatId, formatType, preset, outputPath, filenameTemplate }) {
     const job = {
       downloadId,
       url,
       title: title || "Untitled",
       thumbnail: thumbnail || null,
       formatId: formatId || null,
+      formatType: formatType || null,
       preset: preset || "best",
       outputPath: outputPath || join(homedir(), "Downloads"),
       filenameTemplate: filenameTemplate || "%(title)s.%(ext)s",
@@ -137,6 +138,7 @@ class DownloadQueue {
     const controller = startDownload({
       url: job.url,
       formatId: job.formatId,
+      formatType: job.formatType,
       preset: job.preset,
       outputPath: job.outputPath,
       filenameTemplate: job.filenameTemplate,

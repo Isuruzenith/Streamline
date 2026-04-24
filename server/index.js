@@ -24,10 +24,14 @@ if (IS_DEV) {
 // WebSocket upgrade
 app.ws("/ws", {
   open(ws) {
-    wsManager.addClient(ws.raw);
+    // ws.raw is the native ServerWebSocket; fall back to ws itself for older Elysia
+    wsManager.addClient(ws.raw ?? ws);
+  },
+  close(ws) {
+    wsManager.removeClient(ws.raw ?? ws);
   },
   message() {
-    // client-to-server messages not needed yet
+    // client-to-server not used
   },
 });
 

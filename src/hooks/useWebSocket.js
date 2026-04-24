@@ -9,6 +9,7 @@ export default function useWebSocket() {
   const wsRef = useRef(null);
   const reconnectTimer = useRef(null);
   const reconnectAttempts = useRef(0);
+  const hasConnectedOnce = useRef(false);
   const updateDownload = useStore((s) => s.updateDownload);
   const appendLog = useStore((s) => s.appendLog);
   const showToast = useStore((s) => s.showToast);
@@ -44,6 +45,7 @@ export default function useWebSocket() {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      hasConnectedOnce.current = true;
       console.log("[ws] connected");
       reconnectAttempts.current = 0;
     };
@@ -58,7 +60,9 @@ export default function useWebSocket() {
     };
 
     ws.onclose = () => {
-      console.log("[ws] disconnected");
+      if (hasConnectedOnce.current) {
+        console.log("[ws] disconnected");
+      }
       scheduleReconnect();
     };
 
@@ -145,8 +149,10 @@ export default function useWebSocket() {
   }, [connect]);
 
   useEffect(() => {
-    connect();
+    // Small initial delay to let the backend finish starting in dev
+    const initialTimer = setTimeout(() => connect(), 300);
     return () => {
+      clearTimeout(initialTimer);
       if (wsRef.current) wsRef.current.close();
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
     };

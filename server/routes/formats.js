@@ -31,7 +31,10 @@ export function formatsRoutes(app) {
       return info;
     } catch (err) {
       return new Response(
-        JSON.stringify({ error: err.message }),
+        JSON.stringify({
+          error: err.message,
+          detail: err.stderr?.trim() || null,
+        }),
         { status: 422, headers: { "Content-Type": "application/json" } }
       );
     }
@@ -53,7 +56,10 @@ export function formatsRoutes(app) {
       return info;
     } catch (err) {
       return new Response(
-        JSON.stringify({ error: err.message }),
+        JSON.stringify({
+          error: err.message,
+          detail: err.stderr?.trim() || null,
+        }),
         { status: 422, headers: { "Content-Type": "application/json" } }
       );
     }
