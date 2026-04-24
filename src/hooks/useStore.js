@@ -3,20 +3,37 @@ import { uid } from "@/lib/utils";
 
 /**
  * Global application store using Zustand.
- * Organized into logical slices: ui, media, downloads, environment.
+ * Organized into logical slices: ui, media, downloads, environment, toast, history.
  */
 const useStore = create((set, get) => ({
   // ─── UI State ─────────────────────────────────────────────
-  activePage: "download", // "download" | "settings"
+  activePage: "download", // "download" | "settings" | "history"
   settingsTab: "general", // "general" | "environment"
   sidebarCollapsed: false,
 
   setActivePage: (page) => set({ activePage: page }),
   setSettingsTab: (tab) => set({ settingsTab: tab }),
 
+  // ─── Toast ────────────────────────────────────────────────
+  toast: null, // { id, message, type: "success"|"error"|"info", visible }
+
+  showToast: (message, type = "info") => {
+    const id = uid();
+    set({ toast: { id, message, type, visible: true } });
+    // Auto-dismiss after 5s
+    setTimeout(() => {
+      const current = get().toast;
+      if (current?.id === id) {
+        set({ toast: null });
+      }
+    }, 5000);
+  },
+
+  dismissToast: () => set({ toast: null }),
+
   // ─── Media Preview ────────────────────────────────────────
   mediaUrl: "",
-  mediaInfo: null, // { title, thumbnail, duration, uploader, upload_date, formats, ... }
+  mediaInfo: null, // { title, thumbnail, duration, uploader, upload_date, formats, is_playlist, ... }
   mediaLoading: false,
   mediaError: null,
 
@@ -25,7 +42,10 @@ const useStore = create((set, get) => ({
   fetchMediaInfo: async (url) => {
     set({ mediaLoading: true, mediaError: null, mediaInfo: null });
     try {
-      const res = await fetch(`/api/formats?url=${encodeURIComponent(url)}`);
+      const cookieBrowser = get().cookieBrowser;
+      let apiUrl = `/api/formats?url=${encodeURIComponent(url)}`;
+      if (cookieBrowser) apiUrl += `&cookieBrowser=${encodeURIComponent(cookieBrowser)}`;
+      const res = await fetch(apiUrl);
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Failed to fetch media info" }));
         throw new Error(err.error || `HTTP ${res.status}`);
@@ -55,16 +75,21 @@ const useStore = create((set, get) => ({
   downloads: [],
   activeDownloadId: null,
 
-  startDownload: async () => {
-    const { mediaInfo, mediaUrl, selectedFormatId, selectedPreset } = get();
-    if (!mediaInfo) return;
+  startDownload: async (overrideUrl, overrideTitle, overrideThumbnail) => {
+    const { mediaInfo, mediaUrl, selectedFormatId, selectedPreset, outputPath, filenameTemplate, cookieBrowser } = get();
+
+    const url = overrideUrl || mediaUrl;
+    const title = overrideTitle || mediaInfo?.title || "Untitled";
+    const thumbnail = overrideThumbnail || mediaInfo?.thumbnail || null;
+
+    if (!url) return;
 
     const id = uid();
     const download = {
       id,
-      url: mediaUrl,
-      title: mediaInfo.title || "Untitled",
-      thumbnail: mediaInfo.thumbnail || null,
+      url,
+      title,
+      thumbnail,
       status: "queued",
       progress: 0,
       speed: null,
@@ -82,10 +107,15 @@ const useStore = create((set, get) => ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          url: mediaUrl,
-          formatId: selectedFormatId,
-          preset: selectedPreset,
+          url,
+          formatId: overrideUrl ? null : selectedFormatId,
+          preset: overrideUrl ? "best" : (selectedPreset || "best"),
           downloadId: id,
+          title,
+          thumbnail,
+          outputPath: outputPath || null,
+          filenameTemplate: filenameTemplate || null,
+          cookieBrowser: cookieBrowser || null,
         }),
       });
       if (!res.ok) {
@@ -108,6 +138,65 @@ const useStore = create((set, get) => ({
         d.id === id ? { ...d, log: [...d.log, line] } : d
       ),
     })),
+
+  removeDownload: async (id) => {
+    // Remove from backend queue
+    try {
+      await fetch(`/api/download/${id}`, { method: "DELETE" });
+    } catch { /* ignore */ }
+
+    set((s) => ({
+      downloads: s.downloads.filter((d) => d.id !== id),
+    }));
+  },
+
+  cancelDownload: async (id) => {
+    try {
+      await fetch(`/api/download/${id}`, { method: "DELETE" });
+    } catch { /* ignore */ }
+  },
+
+  reorderDownloads: (fromIndex, toIndex) => {
+    set((s) => {
+      const downloads = [...s.downloads];
+      const [item] = downloads.splice(fromIndex, 1);
+      downloads.splice(toIndex, 0, item);
+      return { downloads };
+    });
+  },
+
+  // ─── Playlist Selection ───────────────────────────────────
+  playlistSelected: new Set(), // set of entry indices
+
+  togglePlaylistEntry: (index) =>
+    set((s) => {
+      const next = new Set(s.playlistSelected);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return { playlistSelected: next };
+    }),
+
+  selectAllPlaylist: () =>
+    set((s) => {
+      if (!s.mediaInfo?.entries) return {};
+      const all = new Set(s.mediaInfo.entries.map((_, i) => i));
+      return { playlistSelected: all };
+    }),
+
+  deselectAllPlaylist: () => set({ playlistSelected: new Set() }),
+
+  downloadSelectedPlaylistItems: async () => {
+    const { mediaInfo, playlistSelected, startDownload } = get();
+    if (!mediaInfo?.entries) return;
+
+    const selected = [...playlistSelected].sort((a, b) => a - b);
+    for (const idx of selected) {
+      const entry = mediaInfo.entries[idx];
+      if (entry?.url) {
+        await startDownload(entry.url, entry.title, entry.thumbnail);
+      }
+    }
+  },
 
   // ─── Environment ──────────────────────────────────────────
   env: null, // { python: { ok, version, path }, ytdlp: {...}, ffmpeg: {...} }
@@ -137,12 +226,57 @@ const useStore = create((set, get) => ({
     set({ envRepairing: false });
   },
 
+  // ─── History ──────────────────────────────────────────────
+  history: [],
+  historyLoading: false,
+
+  fetchHistory: async () => {
+    set({ historyLoading: true });
+    try {
+      const res = await fetch("/api/history");
+      if (res.ok) {
+        const data = await res.json();
+        set({ history: data, historyLoading: false });
+      }
+    } catch {
+      set({ historyLoading: false });
+    }
+  },
+
+  clearHistory: async () => {
+    try {
+      await fetch("/api/history", { method: "DELETE" });
+      set({ history: [] });
+    } catch { /* ignore */ }
+  },
+
+  removeHistoryItem: async (id) => {
+    try {
+      await fetch(`/api/history/${id}`, { method: "DELETE" });
+      set((s) => ({
+        history: s.history.filter((h) => h.id !== id),
+      }));
+    } catch { /* ignore */ }
+  },
+
+  openFolder: async (filepath) => {
+    try {
+      await fetch("/api/download/open-folder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filepath }),
+      });
+    } catch { /* ignore */ }
+  },
+
   // ─── Settings ─────────────────────────────────────────────
   outputPath: "",
   filenameTemplate: "%(title)s.%(ext)s",
+  cookieBrowser: "", // "chrome" | "firefox" | "edge" | "brave" | "opera" | ""
 
   setOutputPath: (path) => set({ outputPath: path }),
   setFilenameTemplate: (tpl) => set({ filenameTemplate: tpl }),
+  setCookieBrowser: (browser) => set({ cookieBrowser: browser }),
 }));
 
 export default useStore;

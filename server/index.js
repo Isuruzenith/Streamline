@@ -5,6 +5,8 @@ import { join } from "path";
 import { envRoutes } from "./routes/env.js";
 import { formatsRoutes } from "./routes/formats.js";
 import { downloadRoutes } from "./routes/download.js";
+import { historyRoutes } from "./routes/history.js";
+import { cookieRoutes } from "./routes/cookies.js";
 import { wsManager } from "./ws/handler.js";
 
 const PORT = parseInt(process.env.PORT || "7979", 10);
@@ -33,6 +35,8 @@ app.ws("/ws", {
 envRoutes(app);
 formatsRoutes(app);
 downloadRoutes(app);
+historyRoutes(app);
+cookieRoutes(app);
 
 // Serve built frontend in production
 if (!IS_DEV && existsSync(DIST_DIR)) {

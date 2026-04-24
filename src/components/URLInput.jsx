@@ -19,6 +19,8 @@ export default function URLInput() {
     inputRef.current?.focus();
   }, []);
 
+  const isValidUrl = (text) => /^https?:\/\/.+/.test(text?.trim());
+
   const handleSubmit = (e) => {
     e?.preventDefault();
     const url = inputValue.trim();
@@ -26,13 +28,25 @@ export default function URLInput() {
     fetchMediaInfo(url);
   };
 
-  const handlePaste = async () => {
+  // Handle native paste event (Ctrl+V / right-click paste)
+  const handleNativePaste = (e) => {
+    const pasted = e.clipboardData?.getData("text") || "";
+    if (pasted && isValidUrl(pasted)) {
+      // Let the paste complete, then auto-submit
+      setTimeout(() => {
+        setInputValue(pasted.trim());
+        fetchMediaInfo(pasted.trim());
+      }, 0);
+    }
+  };
+
+  // Handle paste button click (clipboard API)
+  const handlePasteButton = async () => {
     try {
       const text = await navigator.clipboard.readText();
       if (text) {
         setInputValue(text.trim());
-        // Auto-submit if it looks like a URL
-        if (text.trim().match(/^https?:\/\//)) {
+        if (isValidUrl(text)) {
           fetchMediaInfo(text.trim());
         }
       }
@@ -70,6 +84,7 @@ export default function URLInput() {
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
+          onPaste={handleNativePaste}
           onKeyDown={handleKeyDown}
           placeholder="Paste any URL — YouTube, Vimeo, Twitter, SoundCloud..."
           disabled={mediaLoading}
@@ -97,7 +112,7 @@ export default function URLInput() {
           )}
           <button
             type="button"
-            onClick={handlePaste}
+            onClick={handlePasteButton}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono",
               "text-text-dim hover:text-accent hover:bg-accent-soft",
@@ -124,7 +139,7 @@ export default function URLInput() {
       {/* Keyboard hint */}
       {!mediaUrl && !mediaLoading && !inputValue && (
         <p className="mt-3 text-xs text-text-dim font-mono opacity-60">
-          Ctrl+V to paste from clipboard · Enter to fetch
+          Paste a URL to auto-fetch · Enter to submit
         </p>
       )}
     </div>

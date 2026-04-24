@@ -1,15 +1,121 @@
 import { resolveYtdlpBin } from "./environment.js";
+import { getCookieArgs } from "./cookies.js";
+
+/**
+ * Detect whether a URL is a playlist.
+ * Uses --flat-playlist --dump-json which outputs one JSON line per entry.
+ */
+export async function detectPlaylist(url, { cookieBrowser } = {}) {
+  const ytdlpBin = resolveYtdlpBin();
+
+  // Quick check: use --flat-playlist to see if multiple entries exist
+  const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings"];
+  if (cookieBrowser) args.push(...getCookieArgs(cookieBrowser));
+  args.push(url);
+
+  const proc = Bun.spawn(args, {
+      stdout: "pipe",
+      stderr: "pipe",
+    }
+  );
+
+  const stdout = await new Response(proc.stdout).text();
+  await new Response(proc.stderr).text();
+  await proc.exited;
+
+  const lines = stdout.trim().split("\n").filter(Boolean);
+  if (lines.length <= 1) return false;
+
+  // Check if first entry has playlist metadata
+  try {
+    const first = JSON.parse(lines[0]);
+    return !!(first._type === "url" || first.ie_key || lines.length > 1);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Fetch playlist info with all entries.
+ * Returns: { is_playlist, playlist_title, playlist_count, entries[] }
+ */
+export async function getPlaylistInfo(url, { cookieBrowser } = {}) {
+  const ytdlpBin = resolveYtdlpBin();
+
+  const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings"];
+  if (cookieBrowser) args.push("--cookies-from-browser", cookieBrowser);
+  args.push(url);
+
+  const proc = Bun.spawn(args, {
+      stdout: "pipe",
+      stderr: "pipe",
+    }
+  );
+
+  const [stdout, stderr] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
+
+  const exitCode = await proc.exited;
+
+  if (exitCode !== 0) {
+    const errorLines = stderr
+      .split("\n")
+      .filter((l) => l.includes("ERROR"))
+      .join("; ");
+    throw new Error(errorLines || stderr.trim() || "yt-dlp failed");
+  }
+
+  const lines = stdout.trim().split("\n").filter(Boolean);
+  const entries = [];
+
+  for (const line of lines) {
+    try {
+      const entry = JSON.parse(line);
+      entries.push({
+        id: entry.id || null,
+        title: entry.title || "Untitled",
+        url: entry.url || entry.webpage_url || null,
+        duration: entry.duration || 0,
+        thumbnail: entry.thumbnails?.[0]?.url || entry.thumbnail || null,
+        uploader: entry.uploader || entry.channel || null,
+      });
+    } catch {
+      // skip malformed lines
+    }
+  }
+
+  // Try to extract playlist title from the URL itself
+  let playlistTitle = "Playlist";
+  if (entries.length > 0) {
+    // Use first entry's playlist_title if available
+    try {
+      const first = JSON.parse(lines[0]);
+      playlistTitle = first.playlist_title || first.playlist || "Playlist";
+    } catch { /* use default */ }
+  }
+
+  return {
+    is_playlist: true,
+    playlist_title: playlistTitle,
+    playlist_count: entries.length,
+    entries,
+  };
+}
 
 /**
  * Fetch media info / formats for a given URL using yt-dlp --dump-json.
  * Returns parsed JSON with title, thumbnail, duration, formats array, etc.
  */
-export async function getFormats(url) {
+export async function getFormats(url, { cookieBrowser } = {}) {
   const ytdlpBin = resolveYtdlpBin();
 
-  const proc = Bun.spawn(
-    [ytdlpBin, "--dump-json", "--no-warnings", "--no-playlist", url],
-    {
+  const args = [ytdlpBin, "--dump-json", "--no-warnings", "--no-playlist"];
+  if (cookieBrowser) args.push(...getCookieArgs(cookieBrowser));
+  args.push(url);
+
+  const proc = Bun.spawn(args, {
       stdout: "pipe",
       stderr: "pipe",
     }
@@ -34,6 +140,7 @@ export async function getFormats(url) {
   try {
     const data = JSON.parse(stdout);
     return {
+      is_playlist: false,
       title: data.title || null,
       thumbnail: data.thumbnail || null,
       duration: data.duration || 0,
@@ -87,6 +194,7 @@ export function startDownload({
   preset,
   outputPath,
   filenameTemplate,
+  cookieBrowser,
   onProgress,
   onMerging,
   onComplete,
@@ -96,6 +204,11 @@ export function startDownload({
   const ytdlpBin = resolveYtdlpBin();
 
   const args = [ytdlpBin, "--newline", "--no-warnings"];
+
+  // Cookie authentication
+  if (cookieBrowser) {
+    args.push(...getCookieArgs(cookieBrowser));
+  }
 
   // Format selection
   if (formatId) {

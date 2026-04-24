@@ -11,6 +11,22 @@ export default function useWebSocket() {
   const reconnectAttempts = useRef(0);
   const updateDownload = useStore((s) => s.updateDownload);
   const appendLog = useStore((s) => s.appendLog);
+  const showToast = useStore((s) => s.showToast);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  const sendBrowserNotification = useCallback((title, body) => {
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        new Notification(title, { body, icon: "/favicon.svg" });
+      } catch { /* not supported */ }
+    }
+  }, []);
 
   const connect = useCallback(() => {
     // Derive WS URL from current location
@@ -70,6 +86,14 @@ export default function useWebSocket() {
             progress: 100,
             filepath: msg.filepath ?? null,
           });
+          showToast(
+            `Download complete — ${msg.title || "file ready"}`,
+            "success"
+          );
+          sendBrowserNotification(
+            "Download Complete",
+            msg.title || "Your file is ready"
+          );
           break;
 
         case "error":
@@ -77,6 +101,10 @@ export default function useWebSocket() {
             status: "error",
             error: msg.error ?? "Download failed",
           });
+          showToast(
+            `Download failed — ${msg.error || "unknown error"}`,
+            "error"
+          );
           break;
 
         case "log":
@@ -89,11 +117,17 @@ export default function useWebSocket() {
           useStore.setState({ env: msg.data });
           break;
 
+        case "removed":
+        case "queue_update":
+        case "queue_reorder":
+          // Queue state managed by store directly
+          break;
+
         default:
           break;
       }
     },
-    [updateDownload, appendLog]
+    [updateDownload, appendLog, showToast, sendBrowserNotification]
   );
 
   const scheduleReconnect = useCallback(() => {

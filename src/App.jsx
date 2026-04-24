@@ -1,6 +1,8 @@
 import Layout from "@/components/Layout";
+import Toast from "@/components/Toast";
 import DownloadPage from "@/pages/DownloadPage";
 import SettingsPage from "@/pages/SettingsPage";
+import HistoryPage from "@/pages/HistoryPage";
 import useStore from "@/hooks/useStore";
 import useWebSocket from "@/hooks/useWebSocket";
 
@@ -16,10 +18,17 @@ export default function App() {
         return <DownloadPage />;
       case "settings":
         return <SettingsPage />;
+      case "history":
+        return <HistoryPage />;
       default:
         return <DownloadPage />;
     }
   };
 
-  return <Layout>{renderPage()}</Layout>;
+  return (
+    <>
+      <Layout>{renderPage()}</Layout>
+      <Toast />
+    </>
+  );
 }

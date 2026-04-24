@@ -1,4 +1,5 @@
-import { FolderOpen, FileText } from "lucide-react";
+import { useState } from "react";
+import { FolderOpen, FileText, Cookie, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import EnvironmentPanel from "@/components/EnvironmentPanel";
 import { cn } from "@/lib/utils";
@@ -8,6 +9,17 @@ const TABS = [
   { id: "environment", label: "Environment" },
 ];
 
+const BROWSERS = [
+  { id: "", label: "None (no cookies)" },
+  { id: "chrome", label: "Google Chrome" },
+  { id: "firefox", label: "Firefox" },
+  { id: "edge", label: "Microsoft Edge" },
+  { id: "brave", label: "Brave" },
+  { id: "opera", label: "Opera" },
+  { id: "chromium", label: "Chromium" },
+  { id: "vivaldi", label: "Vivaldi" },
+];
+
 export default function SettingsPage() {
   const settingsTab = useStore((s) => s.settingsTab);
   const setSettingsTab = useStore((s) => s.setSettingsTab);
@@ -15,6 +27,39 @@ export default function SettingsPage() {
   const setOutputPath = useStore((s) => s.setOutputPath);
   const filenameTemplate = useStore((s) => s.filenameTemplate);
   const setFilenameTemplate = useStore((s) => s.setFilenameTemplate);
+  const cookieBrowser = useStore((s) => s.cookieBrowser);
+  const setCookieBrowser = useStore((s) => s.setCookieBrowser);
+  const showToast = useStore((s) => s.showToast);
+
+  const [cookieExporting, setCookieExporting] = useState(false);
+  const [cookieExported, setCookieExported] = useState(false);
+
+  const handleExportCookies = async () => {
+    if (!cookieBrowser) return;
+    setCookieExporting(true);
+    setCookieExported(false);
+    try {
+      const res = await fetch("/api/cookies/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ browser: cookieBrowser }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCookieExported(true);
+        showToast("Cookies exported successfully!", "success");
+      } else {
+        showToast(
+          `Cookie export failed: ${data.error || "unknown error"}. Try closing ${BROWSERS.find((b) => b.id === cookieBrowser)?.label} first.`,
+          "error"
+        );
+      }
+    } catch (err) {
+      showToast(`Cookie export failed: ${err.message}`, "error");
+    } finally {
+      setCookieExporting(false);
+    }
+  };
 
   return (
     <div>
@@ -104,6 +149,76 @@ export default function SettingsPage() {
                   .replace("%(id)s", "dQw4w9WgXcQ")}
               </div>
             </div>
+          </div>
+
+          {/* Cookie browser */}
+          <div>
+            <label className="block text-sm font-semibold text-text-secondary font-serif mb-2">
+              <span className="flex items-center gap-2">
+                <Cookie size={14} className="text-accent" />
+                Browser cookies
+              </span>
+            </label>
+            <div className="flex gap-2">
+              <select
+                value={cookieBrowser}
+                onChange={(e) => {
+                  setCookieBrowser(e.target.value);
+                  setCookieExported(false);
+                }}
+                className="sl-input flex-1 cursor-pointer"
+              >
+                {BROWSERS.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.label}
+                  </option>
+                ))}
+              </select>
+              {cookieBrowser && (
+                <button
+                  onClick={handleExportCookies}
+                  disabled={cookieExporting}
+                  className="sl-btn sl-btn-outline text-sm whitespace-nowrap"
+                >
+                  {cookieExporting ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Exporting...
+                    </>
+                  ) : cookieExported ? (
+                    <>
+                      <CheckCircle2 size={14} className="text-status-green" />
+                      Exported
+                    </>
+                  ) : (
+                    <>
+                      <Cookie size={14} />
+                      Export cookies
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            <p className="mt-1.5 text-xs text-text-dim">
+              Required for YouTube and other sites that block bots.
+              Select your browser and click <strong>Export cookies</strong> to save them.
+            </p>
+            {cookieBrowser && !cookieExported && (
+              <div className="mt-2 p-2.5 bg-status-orange-bg rounded border border-status-orange/20">
+                <div className="text-xs text-status-orange leading-relaxed">
+                  <strong>Tip:</strong> If export fails, try closing {BROWSERS.find((b) => b.id === cookieBrowser)?.label} first.
+                  Chrome/Edge lock their cookie database while running.
+                </div>
+              </div>
+            )}
+            {cookieExported && (
+              <div className="mt-2 p-2.5 bg-status-green-bg rounded border border-status-green/20">
+                <div className="text-xs text-status-green flex items-center gap-1.5">
+                  <CheckCircle2 size={11} />
+                  Cookies exported from <strong>{BROWSERS.find((b) => b.id === cookieBrowser)?.label}</strong> — ready to use
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

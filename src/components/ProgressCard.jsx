@@ -9,6 +9,8 @@ import useStore from "@/hooks/useStore";
 import { cn, formatBytes, formatSpeed } from "@/lib/utils";
 import DownloadLog from "./DownloadLog";
 
+// Note: This component is kept for backward compat but QueuePanel is now preferred.
+
 export default function ProgressCard() {
   const downloads = useStore((s) => s.downloads);
   const activeDownloadId = useStore((s) => s.activeDownloadId);
@@ -111,7 +113,10 @@ export default function ProgressCard() {
       {/* Complete actions */}
       {isComplete && download.filepath && (
         <div className="flex items-center gap-2 mt-1">
-          <button className="sl-btn sl-btn-outline text-xs py-1.5 px-3">
+          <button
+            onClick={() => useStore.getState().openFolder(download.filepath)}
+            className="sl-btn sl-btn-outline text-xs py-1.5 px-3"
+          >
             <FolderOpen size={13} />
             Open folder
           </button>

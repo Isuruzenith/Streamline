@@ -1,15 +1,22 @@
-import { Download, Settings, History, ChevronLeft } from "lucide-react";
+import { Download, Settings, Clock } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { id: "download", label: "Download", icon: Download },
+  { id: "history", label: "History", icon: Clock },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
 export default function Sidebar() {
   const activePage = useStore((s) => s.activePage);
   const setActivePage = useStore((s) => s.setActivePage);
+  const downloads = useStore((s) => s.downloads);
+
+  // Count active downloads for badge
+  const activeCount = downloads.filter(
+    (d) => d.status === "downloading" || d.status === "merging" || d.status === "queued"
+  ).length;
 
   return (
     <aside className="w-[220px] border-r border-border flex flex-col sticky top-0 h-screen overflow-y-auto flex-shrink-0 select-none">
@@ -34,6 +41,8 @@ export default function Sidebar() {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activePage === item.id;
+          const showBadge = item.id === "download" && activeCount > 0;
+
           return (
             <button
               key={item.id}
@@ -49,6 +58,11 @@ export default function Sidebar() {
                 )}
               />
               <span>{item.label}</span>
+              {showBadge && (
+                <span className="ml-auto sl-badge sl-badge-default text-2xs py-0">
+                  {activeCount}
+                </span>
+              )}
             </button>
           );
         })}

@@ -2,13 +2,15 @@ import URLInput from "@/components/URLInput";
 import MediaPreview from "@/components/MediaPreview";
 import FormatPicker from "@/components/FormatPicker";
 import DownloadButton from "@/components/DownloadButton";
-import ProgressCard from "@/components/ProgressCard";
+import PlaylistPanel from "@/components/PlaylistPanel";
+import QueuePanel from "@/components/QueuePanel";
 import useStore from "@/hooks/useStore";
 
 export default function DownloadPage() {
   const mediaInfo = useStore((s) => s.mediaInfo);
   const downloads = useStore((s) => s.downloads);
   const hasDownloads = downloads.length > 0;
+  const isPlaylist = mediaInfo?.is_playlist === true;
 
   return (
     <div>
@@ -28,32 +30,37 @@ export default function DownloadPage() {
         <URLInput />
       </div>
 
-      {/* Media Preview */}
-      {mediaInfo && (
+      {/* Playlist mode */}
+      {isPlaylist && (
         <div className="mb-6">
-          <MediaPreview />
+          <PlaylistPanel />
         </div>
       )}
 
-      {/* Format Picker */}
-      {mediaInfo && (
-        <div className="mb-6">
-          <FormatPicker />
-        </div>
+      {/* Single video mode */}
+      {mediaInfo && !isPlaylist && (
+        <>
+          {/* Media Preview */}
+          <div className="mb-6">
+            <MediaPreview />
+          </div>
+
+          {/* Format Picker */}
+          <div className="mb-6">
+            <FormatPicker />
+          </div>
+
+          {/* Download Button */}
+          <div className="mb-6">
+            <DownloadButton />
+          </div>
+        </>
       )}
 
-      {/* Download Button */}
-      {mediaInfo && (
-        <div className="mb-6">
-          <DownloadButton />
-        </div>
-      )}
-
-      {/* Active / Recent download progress */}
+      {/* Queue / Active / Recent downloads */}
       {hasDownloads && (
         <div className="mb-6">
-          <div className="sl-section-label">Progress</div>
-          <ProgressCard />
+          <QueuePanel />
         </div>
       )}
     </div>
