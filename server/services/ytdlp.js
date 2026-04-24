@@ -1,4 +1,4 @@
-import { resolveYtdlpBin } from "./environment.js";
+import { resolveYtdlpBin, resolvePythonBin, resolveFFmpegBin } from "./environment.js";
 import { getCookieArgs } from "./cookies.js";
 
 /**
@@ -9,7 +9,8 @@ export async function detectPlaylist(url) {
   const ytdlpBin = resolveYtdlpBin();
 
   // Quick check: use --flat-playlist to see if multiple entries exist
-  const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings", "--no-check-formats", ...getCookieArgs()];
+  const pythonBin = resolvePythonBin();
+  const args = [pythonBin, "-m", "yt_dlp", "--flat-playlist", "--dump-json", "--no-warnings", "--no-check-formats", ...getCookieArgs()];
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -41,7 +42,8 @@ export async function detectPlaylist(url) {
 export async function getPlaylistInfo(url) {
   const ytdlpBin = resolveYtdlpBin();
 
-  const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings", ...getCookieArgs()];
+  const pythonBin = resolvePythonBin();
+  const args = [pythonBin, "-m", "yt_dlp", "--flat-playlist", "--dump-json", "--no-warnings", ...getCookieArgs()];
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -109,7 +111,8 @@ export async function getPlaylistInfo(url) {
 export async function getFormats(url) {
   const ytdlpBin = resolveYtdlpBin();
 
-  const args = [ytdlpBin, "--dump-json", "--no-warnings", "--no-playlist", "--no-check-formats", ...getCookieArgs()];
+  const pythonBin = resolvePythonBin();
+  const args = [pythonBin, "-m", "yt_dlp", "--dump-json", "--no-warnings", "--no-playlist", "--no-check-formats", ...getCookieArgs()];
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -197,9 +200,26 @@ export function startDownload({
   onError,
   onLog,
 }) {
-  const ytdlpBin = resolveYtdlpBin();
+  const pythonBin = resolvePythonBin();
+  const ffmpegBin = resolveFFmpegBin();
 
-  const args = [ytdlpBin, "--newline", "--no-warnings", "--no-check-formats", ...getCookieArgs()];
+  const args = [
+    pythonBin,
+    "-m",
+    "yt_dlp",
+    "--newline",
+    "--no-warnings",
+    "--no-check-formats",
+    "--no-mtime",
+    "--windows-filenames", // Sanitize filenames for Windows
+    "--trim-filenames", "100", // Avoid MAX_PATH issues
+    ...getCookieArgs(),
+  ];
+
+  // Explicitly tell yt-dlp where ffmpeg is
+  if (ffmpegBin) {
+    args.push("--ffmpeg-location", ffmpegBin);
+  }
 
   // Format selection
   if (formatId) {
@@ -225,6 +245,8 @@ export function startDownload({
 
   // Output path
   if (outputPath && filenameTemplate) {
+    // Ensure we use backslashes on Windows if needed, but yt-dlp prefers / usually.
+    // However, join(outputPath, filenameTemplate) is safest.
     args.push("-o", `${outputPath}/${filenameTemplate}`);
   } else if (outputPath) {
     args.push("-o", `${outputPath}/%(title)s.%(ext)s`);

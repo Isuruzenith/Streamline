@@ -31,7 +31,13 @@ export default function useWebSocket() {
   const connect = useCallback(() => {
     // Derive WS URL from current location
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = window.location.host;
+    let host = window.location.host;
+
+    // In development, the backend runs on port 7979 while the frontend runs on 5173 (Vite)
+    if (host.includes(":5173")) {
+      host = host.replace(":5173", ":7979");
+    }
+
     const url = `${protocol}//${host}/ws`;
 
     const ws = new WebSocket(url);

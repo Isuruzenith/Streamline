@@ -45,17 +45,18 @@ export function resolveYtdlpBin() {
 export function resolvePythonBin() {
   const manifest = readEnvManifest();
 
-  if (manifest?.pythonPath && existsSync(manifest.pythonPath)) {
-    return manifest.pythonPath;
-  }
-
-  // Venv python
+  // Venv python (priority)
   if (manifest?.venvPath) {
     const isWin = process.platform === "win32";
     const venvPython = isWin
       ? join(manifest.venvPath, "Scripts", "python.exe")
       : join(manifest.venvPath, "bin", "python3");
     if (existsSync(venvPython)) return venvPython;
+  }
+
+  // Base python installation
+  if (manifest?.pythonPath && existsSync(manifest.pythonPath)) {
+    return manifest.pythonPath;
   }
 
   return "python3";
@@ -138,7 +139,7 @@ export async function checkEnvironment() {
 /**
  * Resolve ffmpeg binary path.
  */
-function resolveFFmpegBin() {
+export function resolveFFmpegBin() {
   const manifest = readEnvManifest();
 
   if (manifest?.ffmpegPath && existsSync(manifest.ffmpegPath)) {
