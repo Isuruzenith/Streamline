@@ -1,11 +1,11 @@
-import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
+import { X } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
 
 const ICONS = {
-  success: CheckCircle2,
-  error: AlertCircle,
-  info: Info,
+  success: "✓",
+  error: "✕",
+  info: "○",
 };
 
 const STYLES = {
@@ -32,24 +32,25 @@ export default function Toast() {
 
   if (!toast) return null;
 
-  const Icon = ICONS[toast.type] || ICONS.info;
+  const icon = ICONS[toast.type] || ICONS.info;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
+    <div className="fixed bottom-6 right-6 z-50 animate-slide-in-right">
       <div
         className={cn(
-          "flex items-start gap-3 px-4 py-3.5 rounded-md border shadow-lg backdrop-blur-sm",
+          "relative flex items-start gap-3 px-4 py-3.5 rounded-md border shadow-lg backdrop-blur-sm overflow-hidden",
           "max-w-[380px] min-w-[280px]",
           STYLES[toast.type] || STYLES.info
         )}
       >
-        <Icon
-          size={16}
+        <span
           className={cn(
-            "flex-shrink-0 mt-0.5",
+            "flex-shrink-0 mt-0.5 text-sm font-mono leading-none",
             ICON_COLORS[toast.type] || ICON_COLORS.info
           )}
-        />
+        >
+          {icon}
+        </span>
         <p
           className={cn(
             "text-sm leading-relaxed flex-1 font-sans",
@@ -65,6 +66,13 @@ export default function Toast() {
         >
           <X size={13} />
         </button>
+        <div
+          className={cn(
+            "absolute bottom-0 left-0 h-px animate-shrink-x",
+            ICON_COLORS[toast.type] || ICON_COLORS.info
+          )}
+          style={{ backgroundColor: "currentColor" }}
+        />
       </div>
     </div>
   );

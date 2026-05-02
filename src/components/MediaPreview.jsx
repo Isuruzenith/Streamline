@@ -3,6 +3,14 @@ import { Clock, User, Calendar, ExternalLink, Film } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { formatDuration } from "@/lib/utils";
 
+const PLATFORM_LABELS = {
+  Youtube: { label: "YouTube", color: "#ff4444" },
+  TikTok: { label: "TikTok", color: "#69c9d0" },
+  Instagram: { label: "Instagram", color: "#e1306c" },
+  Facebook: { label: "Facebook", color: "#1877f2" },
+  Twitter: { label: "Twitter/X", color: "#8b8b8b" },
+};
+
 export default function MediaPreview() {
   const mediaInfo = useStore((s) => s.mediaInfo);
   const [imgFailed, setImgFailed] = useState(false);
@@ -30,6 +38,7 @@ export default function MediaPreview() {
   const formattedDate = upload_date
     ? `${upload_date.slice(0, 4)}-${upload_date.slice(4, 6)}-${upload_date.slice(6, 8)}`
     : null;
+  const platform = PLATFORM_LABELS[extractor_key] || null;
 
   return (
     <div className="sl-card sl-card-accent animate-slide-up overflow-hidden">
@@ -68,9 +77,19 @@ export default function MediaPreview() {
       )}
 
       {/* Title */}
-      <h2 className="text-md font-semibold text-text-primary font-serif leading-snug mb-3">
-        {title || "Untitled"}
-      </h2>
+      <div className="flex items-start gap-2 mb-3">
+        <h2 className="text-md font-semibold text-text-primary font-serif leading-snug min-w-0 flex-1">
+          {title || "Untitled"}
+        </h2>
+        {platform && (
+          <span
+            className="inline-flex items-center px-1.5 py-0.5 rounded-2sm text-2xs font-mono border border-border flex-shrink-0"
+            style={{ color: platform.color }}
+          >
+            {platform.label}
+          </span>
+        )}
+      </div>
 
       {/* Metadata row */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-text-faint">

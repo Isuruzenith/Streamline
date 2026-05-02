@@ -68,6 +68,12 @@ export function downloadRoutes(app) {
     return downloadQueue.getStatus();
   });
 
+  // Resume a paused download
+  app.post("/api/download/resume/:id", ({ params }) => {
+    const resumed = downloadQueue.resume(params.id);
+    return { success: resumed };
+  });
+
   // Cancel/remove a download
   app.delete("/api/download/:id", ({ params }) => {
     const removed = downloadQueue.cancel(params.id);

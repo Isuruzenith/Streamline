@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Download,
+  Film,
 } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
@@ -114,24 +115,20 @@ function HistoryItem({ item, onOpenFolder, onRedownload, onRemove }) {
   return (
     <div className="flex items-start gap-3.5 p-3.5 rounded-md border bg-surface border-border hover:bg-surface-hover transition-colors">
       {/* Thumbnail */}
+      <div className="w-12 h-8 rounded-2sm overflow-hidden flex-shrink-0 bg-surface border border-border">
       {item.thumbnail ? (
-        <div className="w-14 h-10 rounded overflow-hidden flex-shrink-0 bg-surface-hover">
           <img
             src={item.thumbnail}
             alt=""
             className="w-full h-full object-cover"
             loading="lazy"
           />
-        </div>
       ) : (
-        <div className="w-14 h-10 rounded flex-shrink-0 bg-surface-hover flex items-center justify-center">
-          {isComplete ? (
-            <CheckCircle2 size={16} className="text-status-green/40" />
-          ) : (
-            <AlertCircle size={16} className="text-status-red/40" />
-          )}
+        <div className="w-full h-full flex items-center justify-center">
+          <Film size={12} className="text-text-dim" />
         </div>
       )}
+      </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">

@@ -2,7 +2,7 @@ import { homedir } from "os";
 import { join } from "path";
 import { startDownload } from "./ytdlp.js";
 import { historyService } from "./history.js";
-import { createDownloadTempDir, markDownloadTempComplete } from "./temp.js";
+import { createDownloadTempDir, markDownloadTempActive, markDownloadTempComplete } from "./temp.js";
 
 /**
  * Sequential download queue.
@@ -13,6 +13,7 @@ class DownloadQueue {
     this.queue = []; // pending jobs
     this.active = null; // currently downloading
     this.completed = []; // completed/failed (in-memory recent)
+    this.pausedJobs = new Map(); // downloadId -> job snapshot
     this.listeners = new Set();
     this.processing = false;
   }
@@ -102,16 +103,30 @@ class DownloadQueue {
    */
   cancel(downloadId) {
     if (this.active && this.active.downloadId === downloadId) {
+      const progress = this.active.progress || 0;
+      const shouldPause = progress > 5;
+      this.active.status = shouldPause ? "paused" : "cancelled";
+
       if (this.active.controller) {
         this.active.controller.kill();
       }
       markDownloadTempComplete(this.active.tempPath);
-      this.active.status = "cancelled";
-      this.completed.push(this.active);
+
+      if (shouldPause) {
+        this.pausedJobs.set(downloadId, {
+          ...this.active,
+          status: "paused",
+          pausedAt: Date.now(),
+          controller: null,
+        });
+        this.emit({ type: "paused", downloadId, progress });
+      } else {
+        this.completed.push(this.active);
+        this.emit({ type: "error", downloadId, error: "Download cancelled by user" });
+      }
+
       this.active = null;
       this.processing = false;
-
-      this.emit({ type: "error", downloadId, error: "Download cancelled by user" });
 
       // Continue to next
       this.processNext();
@@ -119,6 +134,30 @@ class DownloadQueue {
     }
     // Maybe it's in queue
     return this.remove(downloadId);
+  }
+
+  /**
+   * Resume a paused download by moving it back to the front of the queue.
+   */
+  resume(downloadId) {
+    const job = this.pausedJobs.get(downloadId);
+    if (!job) return false;
+
+    this.pausedJobs.delete(downloadId);
+    this.queue.unshift({
+      ...job,
+      status: "queued",
+      progress: 0,
+      controller: null,
+    });
+    this.emit({
+      type: "queue_update",
+      downloadId,
+      position: 1,
+      total: this.queue.length + (this.active ? 1 : 0),
+    });
+    this.processNext();
+    return true;
   }
 
   /**
@@ -148,7 +187,11 @@ class DownloadQueue {
     this.processing = true;
     const job = this.queue.shift();
     this.active = job;
-    job.tempPath = createDownloadTempDir(job.downloadId);
+    if (job.tempPath) {
+      markDownloadTempActive(job.tempPath);
+    } else {
+      job.tempPath = createDownloadTempDir(job.downloadId);
+    }
 
     let controller;
     try {
@@ -163,6 +206,12 @@ class DownloadQueue {
         options: job.options,
 
         onProgress: (data) => {
+          if (this.active?.downloadId === job.downloadId) {
+            this.active.progress = data.progress;
+            this.active.speed = data.speed;
+            this.active.eta = data.eta;
+            this.active.filesize = data.filesize;
+          }
           this.emit({
             type: "progress",
             downloadId: job.downloadId,
@@ -182,6 +231,7 @@ class DownloadQueue {
         },
 
         onComplete: (data) => {
+          if (job.status === "paused" || job.status === "cancelled") return;
           markDownloadTempComplete(job.tempPath);
           job.status = "complete";
           job.filepath = data.filepath;
@@ -212,6 +262,7 @@ class DownloadQueue {
         },
 
         onError: (data) => {
+          if (job.status === "paused" || job.status === "cancelled") return;
           markDownloadTempComplete(job.tempPath);
           job.status = "error";
           job.error = data.error;
@@ -269,7 +320,13 @@ class DownloadQueue {
   getStatus() {
     return {
       active: this.active
-        ? { downloadId: this.active.downloadId, url: this.active.url, title: this.active.title }
+        ? {
+            downloadId: this.active.downloadId,
+            url: this.active.url,
+            title: this.active.title,
+            thumbnail: this.active.thumbnail,
+            progress: this.active.progress || 0,
+          }
         : null,
       queued: this.queue.map((j) => ({
         downloadId: j.downloadId,
@@ -284,6 +341,13 @@ class DownloadQueue {
         status: h.status,
         filepath: h.filepath || null,
         error: h.error || null,
+      })),
+      paused: [...this.pausedJobs.values()].map((j) => ({
+        downloadId: j.downloadId,
+        url: j.url,
+        title: j.title,
+        thumbnail: j.thumbnail,
+        progress: j.progress,
       })),
     };
   }

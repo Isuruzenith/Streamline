@@ -43,7 +43,7 @@ export default function FormatPicker() {
     <div className="animate-slide-up">
       {/* Quick presets */}
       <div className="sl-section-label">Format</div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="inline-flex max-w-full rounded-md border border-border overflow-hidden bg-surface">
         {PRESETS.map((preset) => {
           const Icon = preset.icon;
           const isSelected = selectedPreset === preset.id;
@@ -53,32 +53,22 @@ export default function FormatPicker() {
               id={`preset-${preset.id}`}
               onClick={() => setSelectedPreset(preset.id)}
               className={cn(
-                "flex items-center gap-3 p-3.5 rounded-md border transition-all duration-150 text-left",
+                "flex items-center gap-2 px-3.5 py-2 text-xs font-mono transition-colors border-r border-border last:border-0",
                 isSelected
-                  ? "bg-accent-glow border-border-strong"
-                  : "bg-surface border-border hover:bg-surface-hover hover:border-border-accent"
+                  ? "bg-accent-soft text-accent"
+                  : "bg-transparent text-text-muted hover:text-text-primary hover:bg-surface-hover"
               )}
             >
               <Icon
-                size={16}
+                size={13}
                 className={cn(
                   "flex-shrink-0 transition-colors",
                   isSelected ? "text-accent" : "text-text-dim"
                 )}
               />
-              <div className="min-w-0">
-                <div
-                  className={cn(
-                    "text-sm font-semibold truncate transition-colors",
-                    isSelected ? "text-text-primary" : "text-text-secondary"
-                  )}
-                >
-                  {preset.label}
-                </div>
-                <div className="text-xs text-text-dim truncate">{preset.desc}</div>
-              </div>
+              <span className="truncate">{preset.label}</span>
               {isSelected && (
-                <Check size={14} className="text-accent ml-auto flex-shrink-0" />
+                <Check size={12} className="text-accent flex-shrink-0" />
               )}
             </button>
           );

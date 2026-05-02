@@ -47,6 +47,11 @@
     background: rgba(212, 196, 166, 0.2);
     color: #e8e3db;
   }
+
+  kbd {
+    @apply inline-flex items-center px-1 py-0.5 rounded-2sm border border-border
+      text-2xs font-mono text-text-dim bg-surface;
+  }
 }
 
 @layer components {
@@ -141,6 +146,7 @@
   .sl-progress-fill {
     @apply absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out;
     background: linear-gradient(90deg, #d4c4a6, #e8dcc8);
+    background-size: 200% 100%;
   }
 
   .sl-progress-indeterminate {
