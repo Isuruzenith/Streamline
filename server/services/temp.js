@@ -30,9 +30,15 @@ export function createDownloadTempDir(downloadId) {
   cleanupExpiredDownloadTemps();
 
   const tempPath = join(DOWNLOAD_TEMP_DIR, safeId(downloadId));
+  markDownloadTempActive(tempPath);
+  return tempPath;
+}
+
+export function markDownloadTempActive(tempPath) {
+  if (!tempPath) return;
+
   mkdirSync(tempPath, { recursive: true });
   writeFileSync(activeMarkerPath(tempPath), new Date().toISOString());
-  return tempPath;
 }
 
 export function markDownloadTempComplete(tempPath) {

@@ -75,6 +75,8 @@ export default {
         "fade-in": "fadeIn 0.3s ease-out",
         "slide-up": "slideUp 0.3s ease-out",
         "slide-in": "slideIn 0.2s ease-out",
+        "slide-in-right": "slideInRight 0.25s ease-out",
+        "shrink-x": "shrinkX 5s linear forwards",
         "pulse-soft": "pulseSoft 2s ease-in-out infinite",
         "progress-bar": "progressBar 1.5s ease-in-out infinite",
       },
@@ -90,6 +92,14 @@ export default {
         slideIn: {
           "0%": { opacity: "0", transform: "translateX(-4px)" },
           "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        slideInRight: {
+          "0%": { opacity: "0", transform: "translateX(16px) translateY(0)" },
+          "100%": { opacity: "1", transform: "translateX(0) translateY(0)" },
+        },
+        shrinkX: {
+          "0%": { width: "100%" },
+          "100%": { width: "0%" },
         },
         pulseSoft: {
           "0%, 100%": { opacity: "1" },

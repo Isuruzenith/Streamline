@@ -93,7 +93,23 @@ export default function useWebSocket() {
           if (msg.line) appendLog(msg.downloadId, msg.line);
           break;
 
+        case "paused":
+          useStore.setState((s) => ({
+            pausedDownloads: [
+              ...s.pausedDownloads.filter((d) => d.downloadId !== msg.downloadId),
+              { downloadId: msg.downloadId, progress: msg.progress ?? 0 },
+            ],
+          }));
+          updateDownload(msg.downloadId, {
+            status: "paused",
+            progress: msg.progress ?? 0,
+          });
+          break;
+
         case "complete":
+          useStore.setState((s) => ({
+            pausedDownloads: s.pausedDownloads.filter((d) => d.downloadId !== msg.downloadId),
+          }));
           updateDownload(msg.downloadId, {
             status: "complete",
             progress: 100,
@@ -110,6 +126,9 @@ export default function useWebSocket() {
           break;
 
         case "error":
+          useStore.setState((s) => ({
+            pausedDownloads: s.pausedDownloads.filter((d) => d.downloadId !== msg.downloadId),
+          }));
           updateDownload(msg.downloadId, {
             status: "error",
             error: msg.error ?? "Download failed",

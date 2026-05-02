@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
   Loader2,
   CheckCircle2,
@@ -7,20 +7,31 @@ import {
   GripVertical,
   StopCircle,
   Merge,
+  Download,
+  Play,
 } from "lucide-react";
 import useStore from "@/hooks/useStore";
-import { cn, formatSpeed } from "@/lib/utils";
+import { cn, formatBytes } from "@/lib/utils";
 
 export default function QueuePanel() {
   const downloads = useStore((s) => s.downloads);
   const removeDownload = useStore((s) => s.removeDownload);
   const cancelDownload = useStore((s) => s.cancelDownload);
+  const resumeDownload = useStore((s) => s.resumeDownload);
   const reorderDownloads = useStore((s) => s.reorderDownloads);
 
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
 
-  if (downloads.length === 0) return null;
+  const downloadingCount = downloads.filter((d) => d.status === "downloading" || d.status === "merging").length;
+  const queuedCount = downloads.filter((d) => d.status === "queued").length;
+  const completedCount = downloads.filter((d) => d.status === "complete").length;
+
+  const clearCompleted = () => {
+    downloads
+      .filter((download) => download.status === "complete")
+      .forEach((download) => removeDownload(download.id));
+  };
 
   const handleDragStart = (e, index) => {
     setDragIndex(index);
@@ -51,6 +62,31 @@ export default function QueuePanel() {
   return (
     <div className="animate-slide-up">
       <div className="sl-section-label">Queue</div>
+      {downloads.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center gap-3 border border-border rounded-md bg-surface">
+          <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center border border-border">
+            <Download size={16} className="text-text-dim" />
+          </div>
+          <p className="text-sm text-text-dim">No downloads yet</p>
+          <p className="text-xs text-text-dim opacity-60">Paste a URL above to get started</p>
+        </div>
+      ) : (
+      <>
+      {downloads.length > 1 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-mono text-text-dim">
+          <span>
+            {downloads.length} items · {downloadingCount} downloading · {queuedCount} queued
+          </span>
+          {completedCount > 0 && (
+            <button
+              onClick={clearCompleted}
+              className="ml-auto text-text-dim hover:text-accent transition-colors"
+            >
+              Clear completed ×
+            </button>
+          )}
+        </div>
+      )}
       <div className="space-y-1.5">
         {downloads.map((dl, index) => (
           <QueueItem
@@ -61,6 +97,7 @@ export default function QueuePanel() {
             isDragOver={dragOverIndex === index}
             onRemove={() => removeDownload(dl.id)}
             onCancel={() => cancelDownload(dl.id)}
+            onResume={() => resumeDownload(dl.id)}
             onDragStart={(e) => handleDragStart(e, index)}
             onDragOver={(e) => handleDragOver(e, index)}
             onDrop={(e) => handleDrop(e, index)}
@@ -68,6 +105,8 @@ export default function QueuePanel() {
           />
         ))}
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -79,26 +118,29 @@ function QueueItem({
   isDragOver,
   onRemove,
   onCancel,
+  onResume,
   onDragStart,
   onDragOver,
   onDrop,
   onDragEnd,
 }) {
   const openFolder = useStore((s) => s.openFolder);
-  const { id, title, status, progress, speed, eta, error, filepath, thumbnail } = download;
+  const { title, status, progress, speed, eta, error, filepath, thumbnail, filesize } = download;
   const [isHandleGrabbing, setIsHandleGrabbing] = useState(false);
 
   const isActive = status === "downloading" || status === "merging";
   const isQueued = status === "queued";
   const isComplete = status === "complete";
   const isError = status === "error";
+  const isPaused = status === "paused";
 
   const statusConfig = {
-    queued: { icon: Loader2, color: "text-text-dim", label: "Queued", spin: false },
-    downloading: { icon: Loader2, color: "text-accent", label: `${Math.round(progress || 0)}%`, spin: true },
-    merging: { icon: Merge, color: "text-status-orange", label: "Merging", spin: false },
-    complete: { icon: CheckCircle2, color: "text-status-green", label: "Done", spin: false },
-    error: { icon: AlertCircle, color: "text-status-red", label: "Failed", spin: false },
+    queued: { icon: Loader2, color: "text-text-dim", dot: "bg-text-dim", label: "Queued", spin: false },
+    downloading: { icon: Loader2, color: "text-status-blue", dot: "bg-status-blue animate-pulse", label: "Downloading", spin: true },
+    merging: { icon: Merge, color: "text-status-orange", dot: "bg-status-orange", label: "Merging", spin: false },
+    complete: { icon: CheckCircle2, color: "text-status-green", dot: "bg-status-green", label: "Done", spin: false },
+    error: { icon: AlertCircle, color: "text-status-red", dot: "bg-status-red", label: "Failed", spin: false },
+    paused: { icon: StopCircle, color: "text-status-orange", dot: "bg-status-orange", label: "Paused", spin: false },
   };
 
   const cfg = statusConfig[status] || statusConfig.queued;
@@ -158,19 +200,20 @@ function QueueItem({
           <span className="text-sm font-semibold text-text-primary font-serif truncate">
             {title}
           </span>
-          <span className={cn("text-xs font-mono flex-shrink-0", cfg.color)}>
+          <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-2sm border border-border text-xs font-mono flex-shrink-0", cfg.color)}>
+            <span className={cn("w-1.5 h-1.5 rounded-full", cfg.dot)} />
             {cfg.label}
           </span>
         </div>
 
         {/* Progress bar for active */}
-        {isActive && (
-          <div className="sl-progress mt-2">
+        {(isActive || isPaused || isComplete) && (
+          <div className="sl-progress mt-2 h-1.5">
             {status === "merging" ? (
               <div className="sl-progress-indeterminate w-full" />
             ) : (
               <div
-                className="sl-progress-fill"
+                className={cn("sl-progress-fill", status === "downloading" && "animate-progress-bar")}
                 style={{ width: `${Math.min(progress || 0, 100)}%` }}
               />
             )}
@@ -178,10 +221,18 @@ function QueueItem({
         )}
 
         {/* Stats row for active */}
-        {isActive && (
-          <div className="flex items-center gap-4 mt-1.5 text-xs font-mono text-text-dim">
-            {speed && <span>{formatSpeed(speed)}</span>}
-            {eta && <span>ETA {eta}s</span>}
+        {(isActive || isPaused) && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs font-mono text-text-dim">
+            <span>
+              {Math.round(progress || 0)}%
+              {filesize && <span className="text-text-faint"> of {formatBytes(filesize)}</span>}
+            </span>
+            {status === "downloading" && speed && (
+              <span>
+                ↓ {formatBytes(speed)}/s
+                {eta && ` · ETA ${eta}`}
+              </span>
+            )}
           </div>
         )}
 
@@ -220,6 +271,15 @@ function QueueItem({
             aria-label="Cancel download"
           >
             <StopCircle size={14} />
+          </button>
+        )}
+        {isPaused && (
+          <button
+            onClick={onResume}
+            className="p-1 text-text-dim hover:text-accent transition-colors"
+            aria-label="Resume download"
+          >
+            <Play size={14} />
           </button>
         )}
       </div>

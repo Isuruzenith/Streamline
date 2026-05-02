@@ -67,9 +67,12 @@ const useStore = create((set, get) => ({
   activePage: "download", // "download" | "settings" | "history"
   settingsTab: "general", // "general" | "environment"
   sidebarCollapsed: false,
+  batchMode: false,
 
   setActivePage: (page) => set({ activePage: page }),
   setSettingsTab: (tab) => set({ settingsTab: tab }),
+  setBatchMode: (batchMode) => set({ batchMode }),
+  toggleBatchMode: () => set((s) => ({ batchMode: !s.batchMode })),
 
   // ─── Toast ────────────────────────────────────────────────
   toast: null, // { id, message, type: "success"|"error"|"info", visible }
@@ -129,9 +132,10 @@ const useStore = create((set, get) => ({
   // ─── Downloads ────────────────────────────────────────────
   /**
    * Each download: { id, url, title, thumbnail, status, progress, speed, eta, filesize, filepath, log[], error }
-   * status: "queued" | "downloading" | "merging" | "complete" | "error"
+   * status: "queued" | "downloading" | "merging" | "paused" | "complete" | "error"
    */
   downloads: [],
+  pausedDownloads: [],
   activeDownloadId: null,
 
   startDownload: async (overrideUrl, overrideTitle, overrideThumbnail) => {
@@ -204,6 +208,13 @@ const useStore = create((set, get) => ({
     }
   },
 
+  startBatchDownload: async (urls) => {
+    const { startDownload } = get();
+    for (const url of urls) {
+      await startDownload(url, null, null);
+    }
+  },
+
   updateDownload: (id, updates) =>
     set((s) => ({
       downloads: s.downloads.map((d) => (d.id === id ? { ...d, ...updates } : d)),
@@ -230,6 +241,21 @@ const useStore = create((set, get) => ({
   cancelDownload: async (id) => {
     try {
       await fetch(`/api/download/${id}`, { method: "DELETE" });
+    } catch { /* ignore */ }
+  },
+
+  resumeDownload: async (id) => {
+    try {
+      const res = await fetch(`/api/download/resume/${id}`, { method: "POST" });
+      if (res.ok) {
+        set((s) => ({
+          pausedDownloads: s.pausedDownloads.filter((d) => d.downloadId !== id),
+          downloads: s.downloads.map((d) =>
+            d.id === id ? { ...d, status: "queued", progress: 0, error: null } : d
+          ),
+          activeDownloadId: id,
+        }));
+      }
     } catch { /* ignore */ }
   },
 

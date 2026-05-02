@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { Download, Settings, Clock } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
+import pkg from "../../package.json";
 
 const navItems = [
   { id: "download", label: "Download", icon: Download },
@@ -12,14 +14,37 @@ export default function Sidebar() {
   const activePage = useStore((s) => s.activePage);
   const setActivePage = useStore((s) => s.setActivePage);
   const downloads = useStore((s) => s.downloads);
+  const clearMedia = useStore((s) => s.clearMedia);
+  const toggleBatchMode = useStore((s) => s.toggleBatchMode);
 
   // Count active downloads for badge
   const activeCount = downloads.filter(
     (d) => d.status === "downloading" || d.status === "merging" || d.status === "queued"
   ).length;
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      const isMod = event.metaKey || event.ctrlKey;
+
+      if (event.key === "Escape") {
+        clearMedia();
+        return;
+      }
+
+      if (isMod && event.key.toLowerCase() === "b") {
+        event.preventDefault();
+        setActivePage("download");
+        toggleBatchMode();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [clearMedia, setActivePage, toggleBatchMode]);
+
   return (
     <aside className="w-[220px] border-r border-border flex flex-col sticky top-0 h-screen overflow-y-auto flex-shrink-0 select-none">
+      <div className="h-px bg-border-accent opacity-50 flex-shrink-0" />
       {/* Logo */}
       <div className="px-4 pt-6 pb-5">
         <div className="flex items-center gap-2.5 mb-1">
@@ -69,8 +94,13 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-4 py-4 border-t border-border">
-        <div className="text-2xs font-mono text-text-dim">v0.1.0</div>
+      <div className="px-4 py-4 border-t border-border space-y-3">
+        <div className="flex flex-wrap gap-1.5">
+          <kbd>Mod V</kbd>
+          <kbd>Mod B</kbd>
+          <kbd>Esc</kbd>
+        </div>
+        <div className="text-2xs font-mono text-text-dim">v{pkg.version}</div>
       </div>
     </aside>
   );

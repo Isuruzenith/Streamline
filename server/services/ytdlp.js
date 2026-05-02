@@ -367,6 +367,8 @@ export function startDownload({
     "--trim-filenames", "100", // Avoid MAX_PATH issues
     "--retries", "10",
     "--fragment-retries", "10",
+    "--continue",
+    ...(preset === "audio" ? ["--no-part"] : []),
     "--buffer-size", "16K",
     ...getJsRuntimeArgs(),
     ...getCookieArgs(),
