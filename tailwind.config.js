@@ -11,7 +11,7 @@ export default {
           active: "rgba(212,196,166,0.08)",
         },
         border: {
-          DEFAULT: "rgba(255,255,255,0.06)",
+          DEFAULT: "rgba(255,255,255,0.12)",
           accent: "rgba(212,196,166,0.18)",
           strong: "rgba(212,196,166,0.25)",
         },

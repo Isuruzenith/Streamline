@@ -62,6 +62,21 @@ export default function QueuePanel() {
   return (
     <div className="animate-slide-up">
       <div className="sl-section-label">Queue</div>
+      {downloads.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-mono text-text-dim">
+          <span>
+            {"\u2193"} {downloadingCount} active {"\u00b7"} {queuedCount} queued {"\u00b7"} {"\u2713"} {completedCount} done
+          </span>
+          {completedCount > 0 && (
+            <button
+              onClick={clearCompleted}
+              className="ml-auto text-text-dim hover:text-accent transition-colors"
+            >
+              Clear completed
+            </button>
+          )}
+        </div>
+      )}
       {downloads.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center gap-3 border border-border rounded-md bg-surface">
           <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center border border-border">
@@ -72,21 +87,6 @@ export default function QueuePanel() {
         </div>
       ) : (
       <>
-      {downloads.length > 1 && (
-        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-mono text-text-dim">
-          <span>
-            {downloads.length} items · {downloadingCount} downloading · {queuedCount} queued
-          </span>
-          {completedCount > 0 && (
-            <button
-              onClick={clearCompleted}
-              className="ml-auto text-text-dim hover:text-accent transition-colors"
-            >
-              Clear completed ×
-            </button>
-          )}
-        </div>
-      )}
       <div className="space-y-1.5">
         {downloads.map((dl, index) => (
           <QueueItem
@@ -183,7 +183,7 @@ function QueueItem({
       ) : (
         <StatusIcon
           size={16}
-          className={cn("flex-shrink-0 mt-0.5", cfg.color, cfg.spin && "animate-spin")}
+          className={cn("flex-shrink-0 mt-0.5", cfg.color, cfg.spin && "animate-spin", isComplete && "sl-pop-in")}
         />
       )}
 
@@ -213,7 +213,7 @@ function QueueItem({
               <div className="sl-progress-indeterminate w-full" />
             ) : (
               <div
-                className={cn("sl-progress-fill", status === "downloading" && "animate-progress-bar")}
+                className={cn("sl-progress-fill", status === "downloading" && "sl-progress-active")}
                 style={{ width: `${Math.min(progress || 0, 100)}%` }}
               />
             )}

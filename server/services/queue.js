@@ -60,7 +60,7 @@ class DownloadQueue {
       formatId: formatId || null,
       formatType: formatType || null,
       preset: preset || "best",
-      outputPath: outputPath || join(homedir(), "Downloads"),
+      outputPath: outputPath || join(homedir(), "Downloads", "Streamline"),
       filenameTemplate: filenameTemplate || "%(title)s.%(ext)s",
       options: options || {},
       status: "queued",
@@ -205,8 +205,20 @@ class DownloadQueue {
         filenameTemplate: job.filenameTemplate,
         options: job.options,
 
+        onStart: () => {
+          if (this.active?.downloadId === job.downloadId) {
+            this.active.status = "downloading";
+            this.active.progress = this.active.progress || 0;
+          }
+          this.emit({
+            type: "started",
+            downloadId: job.downloadId,
+          });
+        },
+
         onProgress: (data) => {
           if (this.active?.downloadId === job.downloadId) {
+            this.active.status = "downloading";
             this.active.progress = data.progress;
             this.active.speed = data.speed;
             this.active.eta = data.eta;
@@ -219,7 +231,6 @@ class DownloadQueue {
             speed: data.speed,
             eta: data.eta,
             filesize: data.filesize,
-            line: data.line,
           });
         },
 

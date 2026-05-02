@@ -77,6 +77,13 @@ export default function useWebSocket() {
   const handleMessage = useCallback(
     (msg) => {
       switch (msg.type) {
+        case "started":
+          updateDownload(msg.downloadId, {
+            status: "downloading",
+            progress: msg.progress ?? 0,
+          });
+          break;
+
         case "progress":
           updateDownload(msg.downloadId, {
             status: "downloading",

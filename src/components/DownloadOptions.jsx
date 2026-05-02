@@ -4,6 +4,7 @@ import {
   Captions,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
   FileArchive,
   Gauge,
   Image,
@@ -16,6 +17,16 @@ import useStore from "@/hooks/useStore";
 
 const AUDIO_FORMATS = ["mp3", "m4a", "opus", "aac", "flac", "wav"];
 const SUBTITLE_FORMATS = ["srt", "vtt", "ass", "best"];
+const FLAG_PRESETS = [
+  { label: "Force MP4 container", value: "--merge-output-format mp4" },
+  { label: "Remux to MKV", value: "--remux-video mkv" },
+  { label: "Max 4K resolution", value: "-f bestvideo[height<=2160]+bestaudio/best" },
+  { label: "No playlist", value: "--no-playlist" },
+  { label: "Keep original files", value: "-k" },
+  { label: "Geo-bypass", value: "--geo-bypass" },
+  { label: "Verbose debug output", value: "--verbose" },
+  { label: "Use aria2c downloader", value: "--downloader aria2c --downloader-args aria2c:'-x 16 -s 16'" },
+];
 
 export default function DownloadOptions() {
   const options = useStore((s) => s.downloadOptions);
@@ -28,6 +39,17 @@ export default function DownloadOptions() {
       key,
       target.type === "checkbox" ? target.checked : target.value
     );
+  };
+
+  const insertFlagPreset = (event) => {
+    const value = event.target.value;
+    if (!value) return;
+
+    setDownloadOption(
+      "customFlags",
+      [options.customFlags?.trim(), value].filter(Boolean).join(" ")
+    );
+    event.target.value = "";
   };
 
   return (
@@ -180,7 +202,7 @@ export default function DownloadOptions() {
             />
           </div>
           <p className="mt-2 text-xs text-text-dim">
-            Default is 4 fragments for faster segmented downloads. Raise it on
+            Default is 8 fragments for faster segmented downloads. Raise it on
             fast networks; lower it if a site throttles aggressively.
           </p>
         </OptionRow>
@@ -208,12 +230,54 @@ export default function DownloadOptions() {
         </OptionRow>
 
         <OptionRow icon={SlidersHorizontal} title="Custom yt-dlp flags">
-          <input
-            className="sl-input py-2 text-sm mt-3 font-mono"
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <select
+              defaultValue=""
+              onChange={insertFlagPreset}
+              className="sl-input py-2 text-sm flex-1 min-w-[220px]"
+            >
+              <option value="" disabled>
+                Insert preset flag...
+              </option>
+              {FLAG_PRESETS.map((preset) => (
+                <option key={preset.label} value={preset.value}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
+            <a
+              href="https://github.com/yt-dlp/yt-dlp#usage-and-options"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-mono text-accent/70 transition-colors hover:text-accent"
+            >
+              See all flags
+              <ExternalLink size={11} />
+            </a>
+          </div>
+          <textarea
+            className="sl-input py-2 text-sm mt-2 font-mono resize-y"
+            rows={2}
             value={options.customFlags}
             onChange={set("customFlags")}
             placeholder='--merge-output-format mp4 --compat-options filename'
           />
+          {options.customFlags?.trim() && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {options.customFlags.trim().split(/\s+/).map((token, i) => (
+                <code
+                  key={`${token}-${i}`}
+                  className={`sl-code text-2xs px-1.5 py-0.5 rounded ${
+                    token.startsWith("--") || token.startsWith("-")
+                      ? "text-accent border border-accent/30 bg-accent/5"
+                      : "text-text-muted"
+                  }`}
+                >
+                  {token}
+                </code>
+              ))}
+            </div>
+          )}
         </OptionRow>
       </div>}
     </div>

@@ -127,6 +127,42 @@ export default function SettingsPage() {
     }
   };
 
+  const handleBrowseFolder = async () => {
+    try {
+      const tauriOpen = window.__TAURI__?.dialog?.open;
+      if (typeof tauriOpen === "function") {
+        const selected = await tauriOpen({ directory: true, multiple: false });
+        if (typeof selected === "string") setOutputPath(selected);
+        return;
+      }
+
+      const electronDialog =
+        window.electronAPI?.selectFolder ||
+        window.electronAPI?.browseFolder ||
+        window.streamline?.selectFolder;
+      if (typeof electronDialog === "function") {
+        const selected = await electronDialog();
+        if (typeof selected === "string") setOutputPath(selected);
+        return;
+      }
+
+      const res = await fetch("/api/settings/browse-folder", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Folder browse is unavailable");
+      if (data.path) setOutputPath(data.path);
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  };
+
+  const previewFilename = filenameTemplate
+    .replaceAll("%(title)s", "Rick Astley - Never Gonna Give You Up")
+    .replaceAll("%(ext)s", "mp4")
+    .replaceAll("%(uploader)s", "Rick Astley")
+    .replaceAll("%(id)s", "dQw4w9WgXcQ")
+    .replaceAll("%(playlist_index)s", "001")
+    .replaceAll("%(upload_date)s", "20091025");
+
   // Drag & Drop handlers
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
@@ -196,15 +232,20 @@ export default function SettingsPage() {
                 type="text"
                 value={outputPath}
                 onChange={(e) => setOutputPath(e.target.value)}
-                placeholder="~/Downloads (default)"
+                placeholder="~/Downloads/Streamline (default)"
                 className="sl-input flex-1"
               />
-              <button className="sl-btn sl-btn-outline">
+              <button type="button" onClick={handleBrowseFolder} className="sl-btn sl-btn-outline">
                 <FolderOpen size={15} />
               </button>
             </div>
+            {!outputPath && (
+              <p className="mt-1.5 text-xs text-text-dim font-mono">
+                {"\u2192"} Saving to: <span className="text-text-muted">~/Downloads/Streamline</span>
+              </p>
+            )}
             <p className="mt-1.5 text-xs text-text-dim">
-              Leave empty to use system Downloads folder
+              Leave empty to use Streamline's default Downloads folder
             </p>
           </div>
 
@@ -228,11 +269,7 @@ export default function SettingsPage() {
             <div className="mt-2 p-2.5 bg-surface rounded border border-border">
               <div className="text-xs font-mono text-text-dim">Preview:</div>
               <div className="text-sm font-mono text-text-muted mt-1">
-                {filenameTemplate
-                  .replace("%(title)s", "Rick Astley - Never Gonna Give You Up")
-                  .replace("%(ext)s", "mp4")
-                  .replace("%(uploader)s", "Rick Astley")
-                  .replace("%(id)s", "dQw4w9WgXcQ")}
+                {previewFilename}
               </div>
             </div>
           </div>

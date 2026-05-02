@@ -13,11 +13,28 @@ const PLATFORM_LABELS = {
 
 export default function MediaPreview() {
   const mediaInfo = useStore((s) => s.mediaInfo);
+  const mediaLoading = useStore((s) => s.mediaLoading);
   const [imgFailed, setImgFailed] = useState(false);
 
   useEffect(() => {
     setImgFailed(false);
   }, [mediaInfo]);
+
+  if (mediaLoading) {
+    return (
+      <div className="sl-card sl-card-accent animate-slide-up overflow-hidden">
+        <div className="relative -mx-4.5 -mt-4.5 mb-4 aspect-video overflow-hidden rounded-t-md sl-skeleton" />
+        <div className="space-y-3">
+          <div className="h-5 w-4/5 rounded sl-skeleton" />
+          <div className="flex gap-3">
+            <div className="h-4 w-24 rounded sl-skeleton" />
+            <div className="h-4 w-20 rounded sl-skeleton" />
+            <div className="h-4 w-28 rounded sl-skeleton" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!mediaInfo) return null;
 
@@ -34,17 +51,21 @@ export default function MediaPreview() {
     description,
   } = mediaInfo;
 
-  // Format upload date from YYYYMMDD
-  const formattedDate = upload_date
-    ? `${upload_date.slice(0, 4)}-${upload_date.slice(4, 6)}-${upload_date.slice(6, 8)}`
-    : null;
+  const formattedDate =
+    upload_date && /^\d{8}$/.test(upload_date)
+      ? `Uploaded ${new Date(
+          Number(upload_date.slice(0, 4)),
+          Number(upload_date.slice(4, 6)) - 1,
+          Number(upload_date.slice(6, 8))
+        ).toLocaleDateString(undefined, { month: "short", year: "numeric" })}`
+      : null;
   const platform = PLATFORM_LABELS[extractor_key] || null;
 
   return (
     <div className="sl-card sl-card-accent animate-slide-up overflow-hidden">
       {/* Thumbnail */}
       {thumbnail && (
-        <div className="relative -mx-4.5 -mt-4.5 mb-4 overflow-hidden rounded-t-md">
+        <div className="relative -mx-4.5 -mt-4.5 mb-4 aspect-video overflow-hidden rounded-t-md bg-surface-hover">
           {imgFailed ? (
             <div
               className="flex w-full aspect-video items-center justify-center text-text-dim"
@@ -56,7 +77,7 @@ export default function MediaPreview() {
             <img
               src={thumbnail}
               alt={title || "Video thumbnail"}
-              className="w-full aspect-video object-cover"
+              className="h-full w-full object-cover"
               loading="lazy"
               onError={() => setImgFailed(true)}
             />

@@ -15,7 +15,7 @@ const DEFAULT_DOWNLOAD_OPTIONS = {
   sponsorBlock: false,
   downloadArchive: false,
   rateLimit: "",
-  concurrentFragments: 4,
+  concurrentFragments: 8,
   customFlags: "",
 };
 
@@ -234,6 +234,13 @@ const useStore = create((set, get) => ({
     set((s) => ({
       downloads: s.downloads.map((d) =>
         d.id === id ? { ...d, log: [...d.log, line].slice(-500) } : d
+      ),
+    })),
+
+  clearLogs: (id) =>
+    set((s) => ({
+      downloads: s.downloads.map((d) =>
+        !id || d.id === id ? { ...d, log: [] } : d
       ),
     })),
 
