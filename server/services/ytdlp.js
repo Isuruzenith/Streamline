@@ -1,8 +1,17 @@
 import { resolveYtdlpBin, resolveFFmpegBin, resolveBunBin } from "./environment.js";
 import { getCookieArgs } from "./cookies.js";
+import { homedir } from "os";
+import { join } from "path";
+import { mkdirSync } from "fs";
 
 const YOUTUBE_AUTH_HINT =
   "YouTube is asking for a fresh signed-in session. In Settings > Cookie authentication, upload a YouTube cookies.txt exported from a private/incognito YouTube session. Normal browser import may not work for YouTube.";
+const METADATA_CACHE_TTL_MS = 5 * 60 * 1000;
+const metadataCache = new Map();
+
+function getProbeArgs() {
+  return ["--socket-timeout", "10", "--retries", "2", "--extractor-retries", "2"];
+}
 
 function getJsRuntimeArgs() {
   const bunBin = resolveBunBin();
@@ -17,15 +26,103 @@ function normalizeYtdlpError(message) {
   return text;
 }
 
+function getCacheKey(kind, url) {
+  return JSON.stringify({ kind, url, cookies: getCookieArgs() });
+}
+
+function getCached(kind, url) {
+  const entry = metadataCache.get(getCacheKey(kind, url));
+  if (!entry || Date.now() - entry.createdAt > METADATA_CACHE_TTL_MS) {
+    metadataCache.delete(getCacheKey(kind, url));
+    return null;
+  }
+  return structuredClone(entry.value);
+}
+
+function setCached(kind, url, value) {
+  if (metadataCache.size > 100) {
+    const oldestKey = metadataCache.keys().next().value;
+    metadataCache.delete(oldestKey);
+  }
+  metadataCache.set(getCacheKey(kind, url), {
+    createdAt: Date.now(),
+    value: structuredClone(value),
+  });
+}
+
+export function isLikelyPlaylistUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.toLowerCase();
+    const host = parsed.hostname.toLowerCase();
+
+    return (
+      parsed.searchParams.has("list") ||
+      path.includes("playlist") ||
+      path.includes("/sets/") ||
+      path.includes("/albums/") ||
+      path.includes("/album/") ||
+      (host.includes("bandcamp.") && path.includes("/album/"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function parseCustomFlags(input) {
+  const args = [];
+  let current = "";
+  let quote = null;
+  let escaping = false;
+
+  for (const char of String(input || "")) {
+    if (escaping) {
+      current += char;
+      escaping = false;
+      continue;
+    }
+    if (char === "\\") {
+      escaping = true;
+      continue;
+    }
+    if (quote) {
+      if (char === quote) {
+        quote = null;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (/\s/.test(char)) {
+      if (current) {
+        args.push(current);
+        current = "";
+      }
+      continue;
+    }
+    current += char;
+  }
+
+  if (current) args.push(current);
+  return args.filter((arg) => arg !== "--exec" && !arg.startsWith("--exec="));
+}
+
 /**
  * Detect whether a URL is a playlist.
  * Uses --flat-playlist --dump-json which outputs one JSON line per entry.
  */
 export async function detectPlaylist(url) {
+  const cached = getCached("detectPlaylist", url);
+  if (cached !== null) return cached;
+
   const ytdlpBin = resolveYtdlpBin();
 
   // Quick check: use --flat-playlist to see if multiple entries exist
-  const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings", ...getJsRuntimeArgs(), ...getCookieArgs()];
+  const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings", ...getProbeArgs(), ...getJsRuntimeArgs(), ...getCookieArgs()];
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -39,13 +136,19 @@ export async function detectPlaylist(url) {
   await proc.exited;
 
   const lines = stdout.trim().split("\n").filter(Boolean);
-  if (lines.length <= 1) return false;
+  if (lines.length <= 1) {
+    setCached("detectPlaylist", url, false);
+    return false;
+  }
 
   // Check if first entry has playlist metadata
   try {
     const first = JSON.parse(lines[0]);
-    return !!(first._type === "url" || first.ie_key || lines.length > 1);
+    const result = !!(first._type === "url" || first.ie_key || lines.length > 1);
+    setCached("detectPlaylist", url, result);
+    return result;
   } catch {
+    setCached("detectPlaylist", url, false);
     return false;
   }
 }
@@ -55,9 +158,12 @@ export async function detectPlaylist(url) {
  * Returns: { is_playlist, playlist_title, playlist_count, entries[] }
  */
 export async function getPlaylistInfo(url) {
+  const cached = getCached("playlistInfo", url);
+  if (cached) return cached;
+
   const ytdlpBin = resolveYtdlpBin();
 
-  const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings", ...getJsRuntimeArgs(), ...getCookieArgs()];
+  const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings", ...getProbeArgs(), ...getJsRuntimeArgs(), ...getCookieArgs()];
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -110,12 +216,14 @@ export async function getPlaylistInfo(url) {
     } catch { /* use default */ }
   }
 
-  return {
+  const result = {
     is_playlist: true,
     playlist_title: playlistTitle,
     playlist_count: entries.length,
     entries,
   };
+  setCached("playlistInfo", url, result);
+  return result;
 }
 
 /**
@@ -123,9 +231,12 @@ export async function getPlaylistInfo(url) {
  * Returns parsed JSON with title, thumbnail, duration, formats array, etc.
  */
 export async function getFormats(url) {
+  const cached = getCached("formats", url);
+  if (cached) return cached;
+
   const ytdlpBin = resolveYtdlpBin();
 
-  const args = [ytdlpBin, "--dump-json", "--no-warnings", "--no-playlist", ...getJsRuntimeArgs(), ...getCookieArgs()];
+  const args = [ytdlpBin, "--dump-json", "--no-warnings", "--no-playlist", ...getProbeArgs(), ...getJsRuntimeArgs(), ...getCookieArgs()];
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -158,7 +269,7 @@ export async function getFormats(url) {
 
   try {
     const data = JSON.parse(stdout);
-    return {
+    const result = {
       is_playlist: false,
       title: data.title || null,
       thumbnail: data.thumbnail || null,
@@ -186,6 +297,8 @@ export async function getFormats(url) {
         format_note: f.format_note || null,
       })),
     };
+    setCached("formats", url, result);
+    return result;
   } catch {
     throw new Error("Failed to parse yt-dlp output");
   }
@@ -201,6 +314,7 @@ export async function getFormats(url) {
  * @param {string} options.preset - "best" | "1080p" | "720p" | "audio"
  * @param {string} options.outputPath - directory to save to
  * @param {string} options.filenameTemplate - yt-dlp output template
+ * @param {object} options.options - advanced yt-dlp options from the WebUI
  * @param {function} options.onProgress - callback({progress, speed, eta, filesize, line})
  * @param {function} options.onMerging - called when merging begins
  * @param {function} options.onComplete - callback({filepath})
@@ -214,6 +328,7 @@ export function startDownload({
   preset,
   outputPath,
   filenameTemplate,
+  options = {},
   onProgress,
   onMerging,
   onComplete,
@@ -230,6 +345,9 @@ export function startDownload({
     "--no-mtime",
     "--windows-filenames", // Sanitize filenames for Windows
     "--trim-filenames", "100", // Avoid MAX_PATH issues
+    "--retries", "10",
+    "--fragment-retries", "10",
+    "--buffer-size", "16K",
     ...getJsRuntimeArgs(),
     ...getCookieArgs(),
   ];
@@ -262,7 +380,13 @@ export function startDownload({
         args.push("-f", "bestvideo[height<=720]+bestaudio/best[height<=720]/best");
         break;
       case "audio":
-        args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
+        args.push(
+          "-x",
+          "--audio-format",
+          options.audioFormat || "mp3",
+          "--audio-quality",
+          String(options.audioQuality || "0")
+        );
         break;
       default:
         args.push("-f", "bestvideo+bestaudio/best");
@@ -277,6 +401,53 @@ export function startDownload({
   } else if (outputPath) {
     args.push("-o", `${outputPath}/%(title)s.%(ext)s`);
   }
+
+  if (options.writeSubtitles) {
+    args.push("--write-subs");
+    if (options.writeAutoSubtitles) args.push("--write-auto-subs");
+    if (options.subtitleLanguages) {
+      args.push("--sub-langs", String(options.subtitleLanguages));
+    }
+    if (options.subtitleFormat && options.subtitleFormat !== "best") {
+      args.push("--sub-format", String(options.subtitleFormat));
+    }
+  }
+
+  if (options.writeThumbnail) {
+    args.push("--write-thumbnail");
+  }
+
+  if (options.embedMetadata) {
+    args.push("--embed-metadata");
+    if (options.writeThumbnail) args.push("--embed-thumbnail");
+  }
+
+  if (options.chaptersMode === "split") {
+    args.push("--split-chapters");
+  } else if (options.chaptersMode === "embed") {
+    args.push("--embed-chapters");
+  }
+
+  if (options.sponsorBlock) {
+    args.push("--sponsorblock-remove", "all");
+  }
+
+  if (options.downloadArchive) {
+    const streamlineDir = join(homedir(), ".streamline");
+    mkdirSync(streamlineDir, { recursive: true });
+    args.push("--download-archive", join(streamlineDir, "download-archive.txt"));
+  }
+
+  if (options.rateLimit) {
+    args.push("--limit-rate", String(options.rateLimit));
+  }
+
+  const fragments = Number(options.concurrentFragments || 4);
+  if (Number.isFinite(fragments) && fragments > 1) {
+    args.push("--concurrent-fragments", String(Math.min(Math.max(Math.floor(fragments), 1), 16)));
+  }
+
+  args.push(...parseCustomFlags(options.customFlags));
 
   args.push(url);
 

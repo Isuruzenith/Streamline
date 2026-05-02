@@ -11,9 +11,21 @@
     "dev:frontend": "vite --port 5173",
     "dev:backend": "bun --watch server/index.js",
     "build": "vite build",
+    "ci": "bun run build",
+    "prepublishOnly": "bun run build",
     "start": "bun server/index.js",
     "postinstall": "bun scripts/provision.js"
   },
+  "files": [
+    "bin",
+    "dist",
+    "server",
+    "scripts",
+    "public",
+    "docs",
+    "README.md",
+    "package.json"
+  ],
   "dependencies": {
     "elysia": "^1.2.0",
     "@elysiajs/cors": "^1.2.0",

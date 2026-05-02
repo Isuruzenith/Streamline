@@ -38,7 +38,18 @@ class DownloadQueue {
   /**
    * Add a download job to the queue.
    */
-  add({ downloadId, url, title, thumbnail, formatId, formatType, preset, outputPath, filenameTemplate }) {
+  add({
+    downloadId,
+    url,
+    title,
+    thumbnail,
+    formatId,
+    formatType,
+    preset,
+    outputPath,
+    filenameTemplate,
+    options,
+  }) {
     const job = {
       downloadId,
       url,
@@ -49,6 +60,7 @@ class DownloadQueue {
       preset: preset || "best",
       outputPath: outputPath || join(homedir(), "Downloads"),
       filenameTemplate: filenameTemplate || "%(title)s.%(ext)s",
+      options: options || {},
       status: "queued",
       addedAt: Date.now(),
     };
@@ -142,6 +154,7 @@ class DownloadQueue {
       preset: job.preset,
       outputPath: job.outputPath,
       filenameTemplate: job.filenameTemplate,
+      options: job.options,
 
       onProgress: (data) => {
         this.emit({

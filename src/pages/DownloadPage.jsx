@@ -5,6 +5,7 @@ import DownloadButton from "@/components/DownloadButton";
 import PlaylistPanel from "@/components/PlaylistPanel";
 import QueuePanel from "@/components/QueuePanel";
 import LiveLogs from "@/components/LiveLogs";
+import DownloadOptions from "@/components/DownloadOptions";
 import useStore from "@/hooks/useStore";
 
 export default function DownloadPage() {
@@ -63,6 +64,9 @@ export default function DownloadPage() {
             <>
               <div className="mb-6">
                 <FormatPicker />
+              </div>
+              <div className="mb-6">
+                <DownloadOptions />
               </div>
               <div className="mb-6">
                 <DownloadButton />
