@@ -9,8 +9,7 @@ import {
   Merge,
 } from "lucide-react";
 import useStore from "@/hooks/useStore";
-import { cn, formatBytes, formatSpeed } from "@/lib/utils";
-import DownloadLog from "./DownloadLog";
+import { cn, formatSpeed } from "@/lib/utils";
 
 export default function QueuePanel() {
   const downloads = useStore((s) => s.downloads);
@@ -185,8 +184,6 @@ function QueueItem({
           </button>
         )}
 
-        {/* Collapsible log */}
-        <DownloadLog downloadId={id} />
       </div>
 
       {/* Action buttons */}

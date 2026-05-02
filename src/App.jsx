@@ -27,7 +27,7 @@ export default function App() {
 
   return (
     <>
-      <Layout>{renderPage()}</Layout>
+      <Layout wide={activePage === "download"}>{renderPage()}</Layout>
       <Toast />
     </>
   );
