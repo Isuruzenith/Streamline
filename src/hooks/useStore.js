@@ -6,7 +6,7 @@ const DEFAULT_DOWNLOAD_OPTIONS = {
   audioFormat: "mp3",
   audioQuality: "0",
   writeSubtitles: false,
-  writeAutoSubtitles: true,
+  writeAutoSubtitles: false,
   subtitleLanguages: "en.*",
   subtitleFormat: "srt",
   writeThumbnail: false,
@@ -17,6 +17,15 @@ const DEFAULT_DOWNLOAD_OPTIONS = {
   rateLimit: "",
   concurrentFragments: 4,
   customFlags: "",
+};
+
+const UNCHECKED_DOWNLOAD_OPTIONS = {
+  writeSubtitles: false,
+  writeAutoSubtitles: false,
+  writeThumbnail: false,
+  embedMetadata: false,
+  sponsorBlock: false,
+  downloadArchive: false,
 };
 
 function readPersistedSettings() {
@@ -55,6 +64,7 @@ const initialSettings = {
     ...(persistedSettings.downloadOptions && typeof persistedSettings.downloadOptions === "object"
       ? persistedSettings.downloadOptions
       : {}),
+    ...UNCHECKED_DOWNLOAD_OPTIONS,
   },
 };
 
@@ -138,7 +148,7 @@ const useStore = create((set, get) => ({
   pausedDownloads: [],
   activeDownloadId: null,
 
-  startDownload: async (overrideUrl, overrideTitle, overrideThumbnail) => {
+  startDownload: async (overrideUrl, overrideTitle, overrideThumbnail, downloadConfig = {}) => {
     const {
       mediaInfo,
       mediaUrl,
@@ -190,7 +200,7 @@ const useStore = create((set, get) => ({
           url,
           formatId: overrideUrl ? null : selectedFormatId,
           formatType: overrideUrl ? null : formatType,
-          preset: overrideUrl ? "best" : (selectedPreset || "best"),
+          preset: overrideUrl ? (downloadConfig.preset || "best") : (selectedPreset || "best"),
           downloadId: id,
           title,
           thumbnail,
@@ -302,15 +312,42 @@ const useStore = create((set, get) => ({
 
   deselectAllPlaylist: () => set({ playlistSelected: new Set() }),
 
+  invertPlaylistSelection: () =>
+    set((s) => {
+      if (!s.mediaInfo?.entries) return {};
+      const next = new Set();
+      s.mediaInfo.entries.forEach((_, index) => {
+        if (!s.playlistSelected.has(index)) next.add(index);
+      });
+      return { playlistSelected: next };
+    }),
+
+  selectPlaylistRange: (start, end) =>
+    set((s) => {
+      if (!s.mediaInfo?.entries) return {};
+      const max = s.mediaInfo.entries.length - 1;
+      const from = Math.max(0, Math.min(Number(start) - 1, max));
+      const to = Math.max(0, Math.min(Number(end) - 1, max));
+      const low = Math.min(from, to);
+      const high = Math.max(from, to);
+      const next = new Set();
+      for (let index = low; index <= high; index += 1) {
+        next.add(index);
+      }
+      return { playlistSelected: next };
+    }),
+
   downloadSelectedPlaylistItems: async () => {
-    const { mediaInfo, playlistSelected, startDownload } = get();
+    const { mediaInfo, playlistSelected, selectedPreset, startDownload } = get();
     if (!mediaInfo?.entries) return;
 
     const selected = [...playlistSelected].sort((a, b) => a - b);
     for (const idx of selected) {
       const entry = mediaInfo.entries[idx];
       if (entry?.url) {
-        await startDownload(entry.url, entry.title, entry.thumbnail);
+        await startDownload(entry.url, entry.title, entry.thumbnail, {
+          preset: selectedPreset || "best",
+        });
       }
     }
   },
