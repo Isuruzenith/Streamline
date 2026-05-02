@@ -192,9 +192,9 @@ async function main() {
   const pipBin = getVenvPipBin();
 
   if (existsSync(pipBin)) {
-    log(dim("▸"), "Installing yt-dlp...");
+    log(dim("▸"), "Installing yt-dlp with browser/cookie support...");
     try {
-      await run(pipBin, ["install", "--upgrade", "yt-dlp"]);
+      await run(pipBin, ["install", "--upgrade", "yt-dlp[default,curl-cffi]"]);
       const version = await runCapture(
         join(VENV_DIR, process.platform === "win32" ? "Scripts" : "bin", "yt-dlp"),
         ["--version"]

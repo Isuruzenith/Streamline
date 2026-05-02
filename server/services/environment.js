@@ -1,4 +1,4 @@
-import { join, resolve } from "path";
+import { basename, join, resolve } from "path";
 import { homedir } from "os";
 import { existsSync, readFileSync } from "fs";
 
@@ -148,4 +148,16 @@ export function resolveFFmpegBin() {
 
   // Fallback
   return "ffmpeg";
+}
+
+/**
+ * Resolve the current Bun executable so yt-dlp can use it as a JS runtime.
+ */
+export function resolveBunBin() {
+  const execPath = process.execPath;
+  if (execPath && existsSync(execPath) && basename(execPath).toLowerCase().startsWith("bun")) {
+    return execPath;
+  }
+
+  return null;
 }

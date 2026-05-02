@@ -20,6 +20,15 @@ const TABS = [
   { id: "environment", label: "Environment" },
 ];
 
+const BROWSER_OPTIONS = [
+  { id: "chrome", label: "Chrome" },
+  { id: "edge", label: "Edge" },
+  { id: "brave", label: "Brave" },
+  { id: "firefox", label: "Firefox" },
+  { id: "opera", label: "Opera" },
+  { id: "safari", label: "Safari" },
+];
+
 export default function SettingsPage() {
   const settingsTab = useStore((s) => s.settingsTab);
   const setSettingsTab = useStore((s) => s.setSettingsTab);
@@ -31,6 +40,8 @@ export default function SettingsPage() {
 
   const [cookieStatus, setCookieStatus] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [selectedBrowser, setSelectedBrowser] = useState("chrome");
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -90,6 +101,29 @@ export default function SettingsPage() {
       }
     } catch (err) {
       showToast(`Failed to delete: ${err.message}`, "error");
+    }
+  };
+
+  const handleBrowserImport = async () => {
+    setImporting(true);
+    try {
+      const res = await fetch("/api/settings/cookies/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ browser: selectedBrowser }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        showToast(`Imported cookies from ${selectedBrowser}`, "success");
+        fetchCookieStatus();
+      } else {
+        showToast(data.error || "Cookie import failed", "error");
+      }
+    } catch (err) {
+      showToast(`Cookie import failed: ${err.message}`, "error");
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -256,6 +290,8 @@ export default function SettingsPage() {
 
               <p className="text-xs text-text-dim leading-relaxed">
                 After installing, visit the website you want to download from, log in, then export cookies for that site.
+                For YouTube bot/sign-in errors, use a private/incognito YouTube session, open{" "}
+                <code className="sl-code text-2xs">youtube.com/robots.txt</code>, export only YouTube cookies, then upload that file here.
               </p>
             </div>
 
@@ -272,6 +308,54 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Browser import */}
+            <div className="p-4 bg-surface rounded-lg border border-border mb-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-sm font-semibold text-text-secondary">
+                    Import from browser
+                  </p>
+                  <p className="text-xs text-text-dim mt-1">
+                    Streamline asks yt-dlp to export regular browser cookies into a local cookies.txt file.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={selectedBrowser}
+                  onChange={(e) => setSelectedBrowser(e.target.value)}
+                  className="sl-input flex-1"
+                  disabled={importing}
+                >
+                  {BROWSER_OPTIONS.map((browser) => (
+                    <option key={browser.id} value={browser.id}>
+                      {browser.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleBrowserImport}
+                  disabled={importing}
+                  className="sl-btn sl-btn-primary min-w-[120px]"
+                >
+                  {importing ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" />
+                      Importing
+                    </>
+                  ) : (
+                    <>
+                      <Cookie size={15} />
+                      Import
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-text-dim mt-2 leading-relaxed">
+                If import fails on Windows, close the selected browser and try again. For YouTube, uploading extension-exported cookies is more reliable.
+              </p>
             </div>
 
             {/* Current status */}

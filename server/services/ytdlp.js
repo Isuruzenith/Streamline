@@ -1,5 +1,21 @@
-import { resolveYtdlpBin, resolvePythonBin, resolveFFmpegBin } from "./environment.js";
+import { resolveYtdlpBin, resolveFFmpegBin, resolveBunBin } from "./environment.js";
 import { getCookieArgs } from "./cookies.js";
+
+const YOUTUBE_AUTH_HINT =
+  "YouTube is asking for a fresh signed-in session. In Settings > Cookie authentication, upload a YouTube cookies.txt exported from a private/incognito YouTube session. Normal browser import may not work for YouTube.";
+
+function getJsRuntimeArgs() {
+  const bunBin = resolveBunBin();
+  return bunBin ? ["--js-runtimes", `bun:${bunBin}`] : [];
+}
+
+function normalizeYtdlpError(message) {
+  const text = String(message || "").trim();
+  if (/sign in to confirm you.?re not a bot/i.test(text) || /LOGIN_REQUIRED/i.test(text)) {
+    return YOUTUBE_AUTH_HINT;
+  }
+  return text;
+}
 
 /**
  * Detect whether a URL is a playlist.
@@ -9,8 +25,7 @@ export async function detectPlaylist(url) {
   const ytdlpBin = resolveYtdlpBin();
 
   // Quick check: use --flat-playlist to see if multiple entries exist
-  const pythonBin = resolvePythonBin();
-  const args = [pythonBin, "-m", "yt_dlp", "--flat-playlist", "--dump-json", "--no-warnings", ...getCookieArgs()];
+  const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings", ...getJsRuntimeArgs(), ...getCookieArgs()];
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -42,8 +57,7 @@ export async function detectPlaylist(url) {
 export async function getPlaylistInfo(url) {
   const ytdlpBin = resolveYtdlpBin();
 
-  const pythonBin = resolvePythonBin();
-  const args = [pythonBin, "-m", "yt_dlp", "--flat-playlist", "--dump-json", "--no-warnings", ...getCookieArgs()];
+  const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings", ...getJsRuntimeArgs(), ...getCookieArgs()];
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -64,7 +78,7 @@ export async function getPlaylistInfo(url) {
       .split("\n")
       .filter((l) => l.includes("ERROR"))
       .join("; ");
-    throw new Error(errorLines || stderr.trim() || "yt-dlp failed");
+    throw new Error(normalizeYtdlpError(errorLines || stderr.trim() || "yt-dlp failed"));
   }
 
   const lines = stdout.trim().split("\n").filter(Boolean);
@@ -111,8 +125,7 @@ export async function getPlaylistInfo(url) {
 export async function getFormats(url) {
   const ytdlpBin = resolveYtdlpBin();
 
-  const pythonBin = resolvePythonBin();
-  const args = [pythonBin, "-m", "yt_dlp", "--dump-json", "--no-warnings", "--no-playlist", ...getCookieArgs()];
+  const args = [ytdlpBin, "--dump-json", "--no-warnings", "--no-playlist", ...getJsRuntimeArgs(), ...getCookieArgs()];
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -136,7 +149,7 @@ export async function getFormats(url) {
       .map(l => l.replace(/^\s*\[.*?\]\s*/, "").trim())
       .filter(Boolean)
       .join(" | ");
-    const message = errorLines || stderr.trim() || "yt-dlp failed with no output";
+    const message = normalizeYtdlpError(errorLines || stderr.trim() || "yt-dlp failed with no output");
     const err = new Error(message);
     err.stderr = stderr;
     err.exitCode = exitCode;
@@ -207,18 +220,17 @@ export function startDownload({
   onError,
   onLog,
 }) {
-  const pythonBin = resolvePythonBin();
+  const ytdlpBin = resolveYtdlpBin();
   const ffmpegBin = resolveFFmpegBin();
 
   const args = [
-    pythonBin,
-    "-m",
-    "yt_dlp",
+    ytdlpBin,
     "--newline",
     "--no-warnings",
     "--no-mtime",
     "--windows-filenames", // Sanitize filenames for Windows
     "--trim-filenames", "100", // Avoid MAX_PATH issues
+    ...getJsRuntimeArgs(),
     ...getCookieArgs(),
   ];
 
@@ -368,7 +380,7 @@ export function startDownload({
         .filter((l) => l.includes("ERROR"))
         .join("; ");
       onError?.({
-        error: errorLines || "Download failed with exit code " + exitCode,
+        error: normalizeYtdlpError(errorLines || stderrText || "Download failed with exit code " + exitCode),
         stderr: stderrText,
       });
     }
