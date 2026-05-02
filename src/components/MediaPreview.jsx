@@ -1,9 +1,15 @@
-import { Clock, User, Calendar, ExternalLink } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Clock, User, Calendar, ExternalLink, Film } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { formatDuration } from "@/lib/utils";
 
 export default function MediaPreview() {
   const mediaInfo = useStore((s) => s.mediaInfo);
+  const [imgFailed, setImgFailed] = useState(false);
+
+  useEffect(() => {
+    setImgFailed(false);
+  }, [mediaInfo]);
 
   if (!mediaInfo) return null;
 
@@ -30,12 +36,22 @@ export default function MediaPreview() {
       {/* Thumbnail */}
       {thumbnail && (
         <div className="relative -mx-4.5 -mt-4.5 mb-4 overflow-hidden rounded-t-md">
-          <img
-            src={thumbnail}
-            alt={title || "Video thumbnail"}
-            className="w-full aspect-video object-cover"
-            loading="lazy"
-          />
+          {imgFailed ? (
+            <div
+              className="flex w-full aspect-video items-center justify-center text-text-dim"
+              style={{ background: "var(--color-background-secondary, rgba(255,255,255,0.04))" }}
+            >
+              <Film size={36} />
+            </div>
+          ) : (
+            <img
+              src={thumbnail}
+              alt={title || "Video thumbnail"}
+              className="w-full aspect-video object-cover"
+              loading="lazy"
+              onError={() => setImgFailed(true)}
+            />
+          )}
           {/* Duration badge */}
           {duration > 0 && (
             <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/70 rounded text-xs font-mono text-white backdrop-blur-sm">

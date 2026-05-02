@@ -12,6 +12,9 @@ export default function useWebSocket() {
   const hasConnectedOnce = useRef(false);
   const updateDownload = useStore((s) => s.updateDownload);
   const appendLog = useStore((s) => s.appendLog);
+  const appendProvisionLog = useStore((s) => s.appendProvisionLog);
+  const clearProvisionLog = useStore((s) => s.clearProvisionLog);
+  const fetchEnv = useStore((s) => s.fetchEnv);
   const showToast = useStore((s) => s.showToast);
 
   // Request notification permission on mount
@@ -127,6 +130,21 @@ export default function useWebSocket() {
           useStore.setState({ env: msg.data });
           break;
 
+        case "provision_log":
+          if (msg.line) appendProvisionLog(msg.line);
+          break;
+
+        case "provision_done":
+          useStore.setState({ envRepairing: false });
+          fetchEnv();
+          if (msg.success) {
+            clearProvisionLog();
+            showToast("Environment ready", "success");
+          } else {
+            showToast("Provisioning failed — check logs", "error");
+          }
+          break;
+
         case "removed":
         case "queue_update":
         case "queue_reorder":
@@ -137,7 +155,7 @@ export default function useWebSocket() {
           break;
       }
     },
-    [updateDownload, appendLog, showToast, sendBrowserNotification]
+    [updateDownload, appendLog, appendProvisionLog, clearProvisionLog, fetchEnv, showToast, sendBrowserNotification]
   );
 
   const scheduleReconnect = useCallback(() => {

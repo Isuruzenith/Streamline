@@ -473,6 +473,7 @@ export function startDownload({
 
   args.push(...parseCustomFlags(options.customFlags));
 
+  args.push("--print", "after_move:filepath");
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -492,8 +493,14 @@ export function startDownload({
     buffer = lines.pop() || ""; // keep incomplete last line
 
     for (const line of lines) {
-      if (!line.trim()) continue;
+      const trimmed = line.trim();
+      if (!trimmed) continue;
       onLog?.(line);
+
+      if (!trimmed.startsWith("[")) {
+        lastFilepath = trimmed;
+        continue;
+      }
 
       // Parse progress: [download]  25.3% of ~  54.21MiB at    3.45MiB/s ETA 00:12
       const progressMatch = line.match(
@@ -537,9 +544,9 @@ export function startDownload({
         lastFilepath = destMatch[1].trim();
       }
 
-      const quotedOutputMatch = line.match(/\[(?:Merger|Metadata|ExtractAudio|VideoConvertor|Fixup\w*)\].*?(?:into|to)\s+"(.+?)"/);
-      if (quotedOutputMatch) {
-        lastFilepath = quotedOutputMatch[1].trim();
+      const mergerMatch = line.match(/\[Merger\].*?into\s+"(.+?)"/);
+      if (mergerMatch) {
+        lastFilepath = mergerMatch[1].trim();
       }
 
       // Already downloaded

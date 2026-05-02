@@ -1,4 +1,5 @@
 import { checkEnvironment, resolvePythonBin } from "../services/environment.js";
+import { wsManager } from "../ws/handler.js";
 
 const UPDATE_PACKAGES = {
   ytdlp: "yt-dlp[default,curl-cffi]",
@@ -28,30 +29,54 @@ export function envRoutes(app) {
   // Repair
   app.post("/api/env/repair", async () => {
     try {
-      // Run the provision script
       const proc = Bun.spawn(["bun", "scripts/provision.js"], {
         cwd: import.meta.dir.replace(/[/\\]server[/\\]routes$/, ""),
         stdout: "pipe",
         stderr: "pipe",
       });
 
-      const [stdout, stderr] = await Promise.all([
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text(),
-      ]);
+      const streamLines = async (stream) => {
+        const reader = stream.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
 
-      const exitCode = await proc.exited;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            const trimmed = line.trimEnd();
+            if (trimmed) wsManager.broadcast({ type: "provision_log", line: trimmed });
+          }
+        }
 
-      if (exitCode === 0) {
-        // Re-check environment after repair
-        const status = await checkEnvironment();
-        return { success: true, env: status, log: stdout };
-      } else {
-        return new Response(
-          JSON.stringify({ success: false, error: stderr || "Repair failed", log: stdout }),
-          { status: 500, headers: { "Content-Type": "application/json" } }
-        );
-      }
+        const rest = buffer.trimEnd();
+        if (rest) wsManager.broadcast({ type: "provision_log", line: rest });
+      };
+
+      (async () => {
+        try {
+          const [,, exitCode] = await Promise.all([
+            streamLines(proc.stdout),
+            streamLines(proc.stderr),
+            proc.exited,
+          ]);
+          wsManager.broadcast({ type: "provision_done", success: exitCode === 0 });
+          try {
+            const status = await checkEnvironment();
+            wsManager.broadcast({ type: "env_status", data: status });
+          } catch (err) {
+            wsManager.broadcast({ type: "provision_log", line: err.message });
+          }
+        } catch (err) {
+          wsManager.broadcast({ type: "provision_log", line: err.message });
+          wsManager.broadcast({ type: "provision_done", success: false });
+        }
+      })();
+
+      return { started: true };
     } catch (err) {
       return new Response(
         JSON.stringify({ error: err.message }),
