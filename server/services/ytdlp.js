@@ -1,11 +1,13 @@
-import { resolveYtdlpBin, resolveFFmpegBin, resolveBunBin } from "./environment.js";
+import { resolveYtdlpBin, resolveFFmpegLocation, resolveBunBin } from "./environment.js";
 import { getCookieArgs } from "./cookies.js";
 import { homedir } from "os";
 import { join } from "path";
-import { mkdirSync } from "fs";
+import { existsSync, mkdirSync, statSync } from "fs";
 
 const YOUTUBE_AUTH_HINT =
   "YouTube is asking for a fresh signed-in session. In Settings > Cookie authentication, upload a YouTube cookies.txt exported from a private/incognito YouTube session. Normal browser import may not work for YouTube.";
+const SUBTITLE_RATE_LIMIT_HINT =
+  "YouTube rate-limited the subtitle request. Turn off Options > Subtitles and retry the video, or wait a while and retry subtitles with fewer subtitle languages.";
 const METADATA_CACHE_TTL_MS = 5 * 60 * 1000;
 const metadataCache = new Map();
 
@@ -20,10 +22,26 @@ function getJsRuntimeArgs() {
 
 function normalizeYtdlpError(message) {
   const text = String(message || "").trim();
+  if (/Unable to download video subtitles/i.test(text) || (/subtitles?/i.test(text) && /HTTP Error 429/i.test(text))) {
+    return `${SUBTITLE_RATE_LIMIT_HINT} ${text}`;
+  }
   if (/sign in to confirm you.?re not a bot/i.test(text) || /LOGIN_REQUIRED/i.test(text)) {
     return YOUTUBE_AUTH_HINT;
   }
   return text;
+}
+
+function ensureDirectory(path) {
+  if (!path) return;
+
+  if (existsSync(path)) {
+    if (!statSync(path).isDirectory()) {
+      throw new Error(`Expected a directory but found a file: ${path}`);
+    }
+    return;
+  }
+
+  mkdirSync(path, { recursive: true });
 }
 
 function getCacheKey(kind, url) {
@@ -313,6 +331,7 @@ export async function getFormats(url) {
  * @param {string|null} options.formatId - specific format_id or null for preset
  * @param {string} options.preset - "best" | "1080p" | "720p" | "audio"
  * @param {string} options.outputPath - directory to save to
+ * @param {string} options.tempPath - directory for temporary download artifacts
  * @param {string} options.filenameTemplate - yt-dlp output template
  * @param {object} options.options - advanced yt-dlp options from the WebUI
  * @param {function} options.onProgress - callback({progress, speed, eta, filesize, line})
@@ -327,6 +346,7 @@ export function startDownload({
   formatType,
   preset,
   outputPath,
+  tempPath,
   filenameTemplate,
   options = {},
   onProgress,
@@ -336,7 +356,7 @@ export function startDownload({
   onLog,
 }) {
   const ytdlpBin = resolveYtdlpBin();
-  const ffmpegBin = resolveFFmpegBin();
+  const ffmpegLocation = resolveFFmpegLocation();
 
   const args = [
     ytdlpBin,
@@ -353,8 +373,8 @@ export function startDownload({
   ];
 
   // Explicitly tell yt-dlp where ffmpeg is
-  if (ffmpegBin) {
-    args.push("--ffmpeg-location", ffmpegBin);
+  if (ffmpegLocation) {
+    args.push("--ffmpeg-location", ffmpegLocation);
   }
 
   // Format selection
@@ -393,17 +413,21 @@ export function startDownload({
     }
   }
 
-  // Output path
-  if (outputPath && filenameTemplate) {
-    // Ensure we use backslashes on Windows if needed, but yt-dlp prefers / usually.
-    // However, join(outputPath, filenameTemplate) is safest.
-    args.push("-o", `${outputPath}/${filenameTemplate}`);
-  } else if (outputPath) {
-    args.push("-o", `${outputPath}/%(title)s.%(ext)s`);
+  // Final output goes to the user's download folder. yt-dlp scratch files go
+  // into Streamline's temp folder so accidental cwd downloads do not enter Git.
+  if (outputPath) {
+    ensureDirectory(outputPath);
+    args.push("--paths", `home:${outputPath}`);
   }
+  if (tempPath) {
+    ensureDirectory(tempPath);
+    args.push("--paths", `temp:${tempPath}`);
+  }
+  args.push("-o", filenameTemplate || "%(title)s.%(ext)s");
 
   if (options.writeSubtitles) {
     args.push("--write-subs");
+    args.push("--sleep-requests", "1", "--sleep-subtitles", "5");
     if (options.writeAutoSubtitles) args.push("--write-auto-subs");
     if (options.subtitleLanguages) {
       args.push("--sub-langs", String(options.subtitleLanguages));
@@ -511,6 +535,11 @@ export function startDownload({
       const destMatch = line.match(/\[download\]\s+Destination:\s+(.+)/);
       if (destMatch) {
         lastFilepath = destMatch[1].trim();
+      }
+
+      const quotedOutputMatch = line.match(/\[(?:Merger|Metadata|ExtractAudio|VideoConvertor|Fixup\w*)\].*?(?:into|to)\s+"(.+?)"/);
+      if (quotedOutputMatch) {
+        lastFilepath = quotedOutputMatch[1].trim();
       }
 
       // Already downloaded

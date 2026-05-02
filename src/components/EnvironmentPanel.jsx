@@ -28,8 +28,15 @@ const DEPS = [
     key: "ffmpeg",
     label: "ffmpeg",
     icon: "🎞",
-    okNote: "Static binary bundled via imageio[ffmpeg]. Used for merging streams and format conversion.",
-    failNote: "Click Repair to reinstall ffmpeg via imageio[ffmpeg] inside the venv.",
+    okNote: "Bundled binary used for merging streams and format conversion.",
+    failNote: "Click Repair to reinstall the bundled ffmpeg tools.",
+  },
+  {
+    key: "ffprobe",
+    label: "ffprobe",
+    icon: "ff",
+    okNote: "Bundled next to ffmpeg for metadata and postprocessing checks.",
+    failNote: "Click Repair to reinstall the bundled ffmpeg tools.",
   },
 ];
 

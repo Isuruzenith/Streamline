@@ -8,13 +8,18 @@ import { downloadRoutes } from "./routes/download.js";
 import { historyRoutes } from "./routes/history.js";
 import { cookieRoutes } from "./routes/cookies.js";
 import { wsManager } from "./ws/handler.js";
+import { cleanupExpiredDownloadTemps } from "./services/temp.js";
 
 const PORT = parseInt(process.env.PORT || "7979", 10);
 const IS_DEV = process.env.NODE_ENV !== "production";
 const PROJECT_ROOT = import.meta.dir.replace(/[/\\]server$/, "");
 const DIST_DIR = join(PROJECT_ROOT, "dist");
+const TEMP_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 
 const app = new Elysia();
+
+cleanupExpiredDownloadTemps();
+setInterval(cleanupExpiredDownloadTemps, TEMP_CLEANUP_INTERVAL_MS);
 
 // CORS in dev mode (Vite runs on a different port)
 if (IS_DEV) {

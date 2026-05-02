@@ -7,7 +7,7 @@
  * 1. python-build-standalone (Python 3.11)
  * 2. Creates isolated venv
  * 3. Installs yt-dlp
- * 4. Installs ffmpeg via imageio
+ * 4. Installs ffmpeg and ffprobe
  * 5. Writes ~/.streamline/env.json
  *
  * This script is idempotent — safe to re-run.
@@ -15,12 +15,15 @@
 
 import { homedir } from "os";
 import { join } from "path";
-import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { createRequire } from "module";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 
 const STREAMLINE_DIR = join(homedir(), ".streamline");
 const PYTHON_DIR = join(STREAMLINE_DIR, "python");
 const VENV_DIR = join(STREAMLINE_DIR, "venv");
+const FFMPEG_DIR = join(STREAMLINE_DIR, "ffmpeg");
 const ENV_FILE = join(STREAMLINE_DIR, "env.json");
+const require = createRequire(import.meta.url);
 
 // ANSI colors
 const green = (s) => `\x1b[32m${s}\x1b[0m`;
@@ -88,6 +91,36 @@ function getVenvPipBin() {
     return join(VENV_DIR, "Scripts", "pip.exe");
   }
   return join(VENV_DIR, "bin", "pip");
+}
+
+function getToolBinaryName(name) {
+  return process.platform === "win32" ? `${name}.exe` : name;
+}
+
+function copyExecutable(source, destination) {
+  copyFileSync(source, destination);
+  if (process.platform !== "win32") {
+    chmodSync(destination, 0o755);
+  }
+}
+
+function installBundledFfmpegTools() {
+  const ffmpeg = require("@ffmpeg-installer/ffmpeg");
+  const ffprobe = require("@ffprobe-installer/ffprobe");
+  mkdirSync(FFMPEG_DIR, { recursive: true });
+
+  const ffmpegPath = join(FFMPEG_DIR, getToolBinaryName("ffmpeg"));
+  const ffprobePath = join(FFMPEG_DIR, getToolBinaryName("ffprobe"));
+  copyExecutable(ffmpeg.path, ffmpegPath);
+  copyExecutable(ffprobe.path, ffprobePath);
+
+  return {
+    ffmpegPath,
+    ffprobePath,
+    ffmpegLocation: FFMPEG_DIR,
+    ffmpegVersion: ffmpeg.version,
+    ffprobeVersion: ffprobe.version,
+  };
 }
 
 /**
@@ -222,18 +255,32 @@ async function main() {
   // ─── Step 5: Write env.json ─────────────────────────────
   log(dim("▸"), "Writing env manifest...");
 
-  let ffmpegPath = "ffmpeg";
-  // Try to find imageio ffmpeg
+  let ffmpegTools = null;
+  log(dim("â–¸"), "Installing bundled ffmpeg and ffprobe...");
   try {
-    const result = await runCapture(getVenvPythonBin(), [
-      "-c",
-      "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())",
-    ]);
-    if (result && existsSync(result)) {
-      ffmpegPath = result;
+    ffmpegTools = installBundledFfmpegTools();
+    log(green("âœ“"), `ffmpeg and ffprobe installed at ${dim(FFMPEG_DIR)}`);
+  } catch (err) {
+    log(red("âœ—"), `Failed to install bundled ffmpeg tools: ${err.message}`);
+    log(dim("  â†’"), "Trying imageio ffmpeg and system ffprobe as fallback...");
+  }
+
+  let ffmpegPath = ffmpegTools?.ffmpegPath || "ffmpeg";
+  let ffprobePath = ffmpegTools?.ffprobePath || "ffprobe";
+  let ffmpegLocation = ffmpegTools?.ffmpegLocation || null;
+  if (!ffmpegTools) {
+    try {
+      const result = await runCapture(getVenvPythonBin(), [
+        "-c",
+        "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())",
+      ]);
+      if (result && existsSync(result)) {
+        ffmpegPath = result;
+        ffmpegLocation = result;
+      }
+    } catch {
+      // fallback to system ffmpeg
     }
-  } catch {
-    // fallback to system ffmpeg
   }
 
   let ytdlpVersion = null;
@@ -253,6 +300,10 @@ async function main() {
     venvPath: existsSync(venvPython) ? VENV_DIR : null,
     ytdlpVersion,
     ffmpegPath,
+    ffprobePath,
+    ffmpegLocation,
+    ffmpegVersion: ffmpegTools?.ffmpegVersion || null,
+    ffprobeVersion: ffmpegTools?.ffprobeVersion || null,
     installedAt: new Date().toISOString(),
     platform: process.platform,
     arch: process.arch,
