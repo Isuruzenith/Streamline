@@ -1,6 +1,63 @@
 import { create } from "zustand";
 import { uid } from "@/lib/utils";
 
+const SETTINGS_STORAGE_KEY = "streamline:settings";
+const DEFAULT_DOWNLOAD_OPTIONS = {
+  audioFormat: "mp3",
+  audioQuality: "0",
+  writeSubtitles: false,
+  writeAutoSubtitles: true,
+  subtitleLanguages: "en.*",
+  subtitleFormat: "srt",
+  writeThumbnail: false,
+  embedMetadata: false,
+  chaptersMode: "embed",
+  sponsorBlock: false,
+  downloadArchive: false,
+  rateLimit: "",
+  concurrentFragments: 4,
+  customFlags: "",
+};
+
+function readPersistedSettings() {
+  if (typeof localStorage === "undefined") return {};
+
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistSettings(settings) {
+  if (typeof localStorage === "undefined") return;
+
+  try {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({
+      outputPath: settings.outputPath,
+      filenameTemplate: settings.filenameTemplate,
+      downloadOptions: settings.downloadOptions,
+    }));
+  } catch {
+    // Storage can fail in private mode or when quota is exceeded.
+  }
+}
+
+const persistedSettings = readPersistedSettings();
+const initialSettings = {
+  outputPath: persistedSettings.outputPath || "",
+  filenameTemplate: persistedSettings.filenameTemplate || "%(title)s.%(ext)s",
+  downloadOptions: {
+    ...DEFAULT_DOWNLOAD_OPTIONS,
+    ...(persistedSettings.downloadOptions && typeof persistedSettings.downloadOptions === "object"
+      ? persistedSettings.downloadOptions
+      : {}),
+  },
+};
+
 /**
  * Global application store using Zustand.
  * Organized into logical slices: ui, media, downloads, environment, toast, history.
@@ -155,7 +212,7 @@ const useStore = create((set, get) => ({
   appendLog: (id, line) =>
     set((s) => ({
       downloads: s.downloads.map((d) =>
-        d.id === id ? { ...d, log: [...d.log, line] } : d
+        d.id === id ? { ...d, log: [...d.log, line].slice(-500) } : d
       ),
     })),
 
@@ -236,6 +293,7 @@ const useStore = create((set, get) => ({
   env: null, // { python: { ok, version, path }, ytdlp: {...}, ffmpeg: {...} }
   envLoading: false,
   envRepairing: false,
+  provisionLog: [],
 
   fetchEnv: async () => {
     set({ envLoading: true });
@@ -251,14 +309,21 @@ const useStore = create((set, get) => ({
   },
 
   repairEnv: async () => {
-    set({ envRepairing: true });
+    set({ envRepairing: true, provisionLog: [] });
     try {
-      await fetch("/api/env/repair", { method: "POST" });
+      const res = await fetch("/api/env/repair", { method: "POST" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Repair failed to start" }));
+        throw new Error(err.error || "Repair failed to start");
+      }
     } catch {
-      // repair progress comes via WebSocket
+      set({ envRepairing: false });
     }
-    set({ envRepairing: false });
   },
+
+  appendProvisionLog: (line) =>
+    set((s) => ({ provisionLog: [...s.provisionLog, line] })),
+  clearProvisionLog: () => set({ provisionLog: [] }),
 
   // ─── History ──────────────────────────────────────────────
   history: [],
@@ -304,31 +369,28 @@ const useStore = create((set, get) => ({
   },
 
   // ─── Settings ─────────────────────────────────────────────
-  outputPath: "",
-  filenameTemplate: "%(title)s.%(ext)s",
-  downloadOptions: {
-    audioFormat: "mp3",
-    audioQuality: "0",
-    writeSubtitles: false,
-    writeAutoSubtitles: true,
-    subtitleLanguages: "en.*",
-    subtitleFormat: "srt",
-    writeThumbnail: false,
-    embedMetadata: false,
-    chaptersMode: "embed",
-    sponsorBlock: false,
-    downloadArchive: false,
-    rateLimit: "",
-    concurrentFragments: 4,
-    customFlags: "",
-  },
+  outputPath: initialSettings.outputPath,
+  filenameTemplate: initialSettings.filenameTemplate,
+  downloadOptions: initialSettings.downloadOptions,
 
-  setOutputPath: (path) => set({ outputPath: path }),
-  setFilenameTemplate: (tpl) => set({ filenameTemplate: tpl }),
+  setOutputPath: (path) =>
+    set((s) => {
+      const next = { ...s, outputPath: path };
+      persistSettings(next);
+      return { outputPath: path };
+    }),
+  setFilenameTemplate: (tpl) =>
+    set((s) => {
+      const next = { ...s, filenameTemplate: tpl };
+      persistSettings(next);
+      return { filenameTemplate: tpl };
+    }),
   setDownloadOption: (key, value) =>
-    set((s) => ({
-      downloadOptions: { ...s.downloadOptions, [key]: value },
-    })),
+    set((s) => {
+      const downloadOptions = { ...s.downloadOptions, [key]: value };
+      persistSettings({ ...s, downloadOptions });
+      return { downloadOptions };
+    }),
 }));
 
 export default useStore;

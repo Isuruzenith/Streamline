@@ -86,6 +86,7 @@ function QueueItem({
 }) {
   const openFolder = useStore((s) => s.openFolder);
   const { id, title, status, progress, speed, eta, error, filepath, thumbnail } = download;
+  const [isHandleGrabbing, setIsHandleGrabbing] = useState(false);
 
   const isActive = status === "downloading" || status === "merging";
   const isQueued = status === "queued";
@@ -109,7 +110,10 @@ function QueueItem({
       onDragStart={isQueued ? onDragStart : undefined}
       onDragOver={onDragOver}
       onDrop={onDrop}
-      onDragEnd={onDragEnd}
+      onDragEnd={(e) => {
+        setIsHandleGrabbing(false);
+        onDragEnd(e);
+      }}
       className={cn(
         "flex items-start gap-3 p-3.5 rounded-md border transition-all duration-150",
         "bg-surface border-border",
@@ -119,7 +123,19 @@ function QueueItem({
     >
       {/* Drag handle (only for queued items) */}
       {isQueued ? (
-        <div className="flex-shrink-0 cursor-grab active:cursor-grabbing mt-0.5 text-text-dim hover:text-text-muted">
+        <div
+          draggable
+          title="Drag to reorder"
+          onMouseDown={() => setIsHandleGrabbing(true)}
+          onMouseUp={() => setIsHandleGrabbing(false)}
+          onMouseLeave={() => setIsHandleGrabbing(false)}
+          className="flex-shrink-0 mt-0.5 text-text-dim hover:text-text-muted"
+          style={{
+            cursor: isHandleGrabbing ? "grabbing" : "grab",
+            color: "var(--color-text-secondary, currentColor)",
+            fontSize: "14px",
+          }}
+        >
           <GripVertical size={14} />
         </div>
       ) : (

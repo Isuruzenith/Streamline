@@ -17,7 +17,9 @@ const CLEANUP_DELAY_MS = 60 * 60 * 1000;
 const ACTIVE_STALE_MS = 24 * 60 * 60 * 1000;
 
 function safeId(id) {
-  return String(id || Date.now()).replace(/[^a-zA-Z0-9._-]/g, "_");
+  const clean = String(id || Date.now()).replace(/[^a-zA-Z0-9._-]/g, "_");
+  const suffix = Math.random().toString(36).slice(2, 7);
+  return `${clean}-${suffix}`;
 }
 
 function activeMarkerPath(tempPath) {

@@ -12,6 +12,7 @@ export default function URLInput() {
   const setMediaUrl = useStore((s) => s.setMediaUrl);
 
   const [inputValue, setInputValue] = useState(mediaUrl);
+  const [validationError, setValidationError] = useState(null);
   const inputRef = useRef(null);
 
   // Auto-focus on mount
@@ -21,11 +22,29 @@ export default function URLInput() {
 
   const isValidUrl = (text) => /^https?:\/\/.+/.test(text?.trim());
 
+  const validateAndFetch = (value) => {
+    const url = value.trim();
+    let parsed;
+
+    try {
+      parsed = new URL(url);
+    } catch {
+      setValidationError("Please enter a valid URL");
+      return;
+    }
+
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      setValidationError("Only http and https URLs are supported");
+      return;
+    }
+
+    setValidationError(null);
+    fetchMediaInfo(url);
+  };
+
   const handleSubmit = (e) => {
     e?.preventDefault();
-    const url = inputValue.trim();
-    if (!url) return;
-    fetchMediaInfo(url);
+    validateAndFetch(inputValue);
   };
 
   // Handle native paste event (Ctrl+V / right-click paste)
@@ -34,8 +53,9 @@ export default function URLInput() {
     if (pasted && isValidUrl(pasted)) {
       // Let the paste complete, then auto-submit
       setTimeout(() => {
-        setInputValue(pasted.trim());
-        fetchMediaInfo(pasted.trim());
+        const trimmed = pasted.trim();
+        setInputValue(trimmed);
+        validateAndFetch(trimmed);
       }, 0);
     }
   };
@@ -45,10 +65,9 @@ export default function URLInput() {
     try {
       const text = await navigator.clipboard.readText();
       if (text) {
-        setInputValue(text.trim());
-        if (isValidUrl(text)) {
-          fetchMediaInfo(text.trim());
-        }
+        const trimmed = text.trim();
+        setInputValue(trimmed);
+        validateAndFetch(trimmed);
       }
     } catch {
       // Clipboard API denied — user can paste manually
@@ -57,6 +76,7 @@ export default function URLInput() {
 
   const handleClear = () => {
     setInputValue("");
+    setValidationError(null);
     clearMedia();
     inputRef.current?.focus();
   };
@@ -83,7 +103,10 @@ export default function URLInput() {
           id="url-input"
           type="text"
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            setValidationError(null);
+          }}
           onPaste={handleNativePaste}
           onKeyDown={handleKeyDown}
           placeholder="Paste any URL — YouTube, Vimeo, Twitter, SoundCloud..."
@@ -94,7 +117,7 @@ export default function URLInput() {
             "focus:outline-none focus:border-border-accent focus:bg-surface-hover",
             "transition-all duration-200",
             "disabled:opacity-60",
-            mediaError && "border-status-red/40"
+            (validationError || mediaError) && "border-status-red/40"
           )}
         />
 
@@ -127,11 +150,11 @@ export default function URLInput() {
       </form>
 
       {/* Error message */}
-      {mediaError && (
+      {(validationError || mediaError) && (
         <div className="mt-3 flex items-start gap-2 animate-slide-up">
           <div className="sl-dot sl-dot-red mt-1.5 flex-shrink-0" />
           <p className="text-sm text-status-red/80 leading-relaxed">
-            {mediaError}
+            {validationError || mediaError}
           </p>
         </div>
       )}

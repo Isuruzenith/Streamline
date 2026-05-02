@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   RefreshCw,
   Loader2,
@@ -44,9 +44,11 @@ export default function EnvironmentPanel() {
   const env = useStore((s) => s.env);
   const envLoading = useStore((s) => s.envLoading);
   const envRepairing = useStore((s) => s.envRepairing);
+  const provisionLog = useStore((s) => s.provisionLog);
   const fetchEnv = useStore((s) => s.fetchEnv);
   const repairEnv = useStore((s) => s.repairEnv);
   const showToast = useStore((s) => s.showToast);
+  const logRef = useRef(null);
   const [updating, setUpdating] = useState(null);
   const [checkingUpdates, setCheckingUpdates] = useState(false);
   const [availableUpdates, setAvailableUpdates] = useState([]);
@@ -55,7 +57,14 @@ export default function EnvironmentPanel() {
     fetchEnv();
   }, []);
 
+  useEffect(() => {
+    if (logRef.current) {
+      logRef.current.scrollTop = logRef.current.scrollHeight;
+    }
+  }, [provisionLog]);
+
   const hasErrors = env && Object.values(env).some((dep) => !dep.ok);
+  const showProvisionLog = envRepairing || provisionLog.length > 0;
 
   const updateDependency = async (dependency) => {
     setUpdating(dependency);
@@ -142,6 +151,29 @@ export default function EnvironmentPanel() {
             </>
           )}
         </button>
+      )}
+
+      {showProvisionLog && (
+        <div className="mb-5 rounded-md border border-border bg-surface p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-text-secondary font-serif">
+            {envRepairing && <Loader2 size={14} className="animate-spin" />}
+            <span>{envRepairing ? "Repairing..." : "Provisioning log"}</span>
+          </div>
+          <div
+            ref={logRef}
+            className="max-h-[240px] overflow-y-auto rounded bg-[#101010] p-3 font-mono text-xs leading-relaxed text-text-muted"
+          >
+            {provisionLog.length > 0 ? (
+              provisionLog.map((line, index) => (
+                <div key={`${index}-${line}`} className="whitespace-pre-wrap break-words">
+                  {line}
+                </div>
+              ))
+            ) : (
+              <div className="text-text-dim">Starting provision script...</div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Dependency rows */}

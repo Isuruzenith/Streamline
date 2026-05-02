@@ -45,5 +45,8 @@ export function formatSpeed(bytesPerSecond) {
  * Generate a short unique ID
  */
 export function uid() {
-  return Math.random().toString(36).slice(2, 10);
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
 }

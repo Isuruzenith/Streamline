@@ -42,12 +42,23 @@ export function cookieRoutes(app) {
         );
       }
 
+      if (file.size < 20) {
+        return new Response(
+          JSON.stringify({ error: "Invalid cookies.txt — must be a Netscape HTTP Cookie File format" }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
       const content = await file.text();
 
-      // Basic validation: check it looks like a Netscape cookies file
-      if (!content.includes("# Netscape HTTP Cookie File") && !content.includes("\t")) {
+      const hasNetscapeHeader = content
+        .split(/\r?\n/)
+        .slice(0, 10)
+        .some((line) => line.trim() === "# Netscape HTTP Cookie File");
+
+      if (!content.trim() || !hasNetscapeHeader) {
         return new Response(
-          JSON.stringify({ error: "This doesn't look like a valid cookies.txt file. It should start with '# Netscape HTTP Cookie File'" }),
+          JSON.stringify({ error: "Invalid cookies.txt — must be a Netscape HTTP Cookie File format" }),
           { status: 400, headers: { "Content-Type": "application/json" } }
         );
       }
