@@ -1,4 +1,4 @@
-import { saveCookieFile, getCookieStatus, clearCookies } from "../services/cookies.js";
+import { saveCookieFile, getCookieStatus, clearCookies, importCookiesFromBrowser } from "../services/cookies.js";
 
 /**
  * Cookie management API routes.
@@ -8,6 +8,19 @@ import { saveCookieFile, getCookieStatus, clearCookies } from "../services/cooki
  * DELETE /api/settings/cookies  — Delete cookie file
  */
 export function cookieRoutes(app) {
+  // Import cookies directly from a local browser via yt-dlp.
+  app.post("/api/settings/cookies/import", async ({ body }) => {
+    try {
+      const result = await importCookiesFromBrowser(body?.browser);
+      return result;
+    } catch (err) {
+      return new Response(
+        JSON.stringify({ error: err.message }),
+        { status: 422, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  });
+
   // Upload cookies.txt
   app.post("/api/settings/cookies", async ({ request }) => {
     try {

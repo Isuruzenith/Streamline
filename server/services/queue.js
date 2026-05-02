@@ -2,6 +2,7 @@ import { homedir } from "os";
 import { join } from "path";
 import { startDownload } from "./ytdlp.js";
 import { historyService } from "./history.js";
+import { createDownloadTempDir, markDownloadTempComplete } from "./temp.js";
 
 /**
  * Sequential download queue.
@@ -38,7 +39,18 @@ class DownloadQueue {
   /**
    * Add a download job to the queue.
    */
-  add({ downloadId, url, title, thumbnail, formatId, formatType, preset, outputPath, filenameTemplate }) {
+  add({
+    downloadId,
+    url,
+    title,
+    thumbnail,
+    formatId,
+    formatType,
+    preset,
+    outputPath,
+    filenameTemplate,
+    options,
+  }) {
     const job = {
       downloadId,
       url,
@@ -49,6 +61,7 @@ class DownloadQueue {
       preset: preset || "best",
       outputPath: outputPath || join(homedir(), "Downloads"),
       filenameTemplate: filenameTemplate || "%(title)s.%(ext)s",
+      options: options || {},
       status: "queued",
       addedAt: Date.now(),
     };
@@ -92,6 +105,7 @@ class DownloadQueue {
       if (this.active.controller) {
         this.active.controller.kill();
       }
+      markDownloadTempComplete(this.active.tempPath);
       this.active.status = "cancelled";
       this.completed.push(this.active);
       this.active = null;
@@ -134,99 +148,117 @@ class DownloadQueue {
     this.processing = true;
     const job = this.queue.shift();
     this.active = job;
+    job.tempPath = createDownloadTempDir(job.downloadId);
 
-    const controller = startDownload({
-      url: job.url,
-      formatId: job.formatId,
-      formatType: job.formatType,
-      preset: job.preset,
-      outputPath: job.outputPath,
-      filenameTemplate: job.filenameTemplate,
+    let controller;
+    try {
+      controller = startDownload({
+        url: job.url,
+        formatId: job.formatId,
+        formatType: job.formatType,
+        preset: job.preset,
+        outputPath: job.outputPath,
+        tempPath: job.tempPath,
+        filenameTemplate: job.filenameTemplate,
+        options: job.options,
 
-      onProgress: (data) => {
-        this.emit({
-          type: "progress",
-          downloadId: job.downloadId,
-          progress: data.progress,
-          speed: data.speed,
-          eta: data.eta,
-          filesize: data.filesize,
-          line: data.line,
-        });
-      },
+        onProgress: (data) => {
+          this.emit({
+            type: "progress",
+            downloadId: job.downloadId,
+            progress: data.progress,
+            speed: data.speed,
+            eta: data.eta,
+            filesize: data.filesize,
+            line: data.line,
+          });
+        },
 
-      onMerging: () => {
-        this.emit({
-          type: "merging",
-          downloadId: job.downloadId,
-        });
-      },
+        onMerging: () => {
+          this.emit({
+            type: "merging",
+            downloadId: job.downloadId,
+          });
+        },
 
-      onComplete: (data) => {
-        job.status = "complete";
-        job.filepath = data.filepath;
-        this.completed.push(job);
-        this.active = null;
-        this.processing = false;
+        onComplete: (data) => {
+          markDownloadTempComplete(job.tempPath);
+          job.status = "complete";
+          job.filepath = data.filepath;
+          this.completed.push(job);
+          this.active = null;
+          this.processing = false;
 
-        // Persist to history
-        historyService.add({
-          downloadId: job.downloadId,
-          url: job.url,
-          title: job.title,
-          thumbnail: job.thumbnail,
-          filepath: data.filepath,
-          filesize: null,
-          status: "complete",
-        });
+          // Persist to history
+          historyService.add({
+            downloadId: job.downloadId,
+            url: job.url,
+            title: job.title,
+            thumbnail: job.thumbnail,
+            filepath: data.filepath,
+            filesize: null,
+            status: "complete",
+          });
 
-        this.emit({
-          type: "complete",
-          downloadId: job.downloadId,
-          filepath: data.filepath,
-          title: job.title,
-        });
+          this.emit({
+            type: "complete",
+            downloadId: job.downloadId,
+            filepath: data.filepath,
+            title: job.title,
+          });
 
-        // Process next
-        this.processNext();
-      },
+          // Process next
+          this.processNext();
+        },
 
-      onError: (data) => {
-        job.status = "error";
-        job.error = data.error;
-        this.completed.push(job);
-        this.active = null;
-        this.processing = false;
+        onError: (data) => {
+          markDownloadTempComplete(job.tempPath);
+          job.status = "error";
+          job.error = data.error;
+          this.completed.push(job);
+          this.active = null;
+          this.processing = false;
 
-        // Also save errors to history
-        historyService.add({
-          downloadId: job.downloadId,
-          url: job.url,
-          title: job.title,
-          thumbnail: job.thumbnail,
-          filepath: null,
-          filesize: null,
-          status: "error",
-        });
+          // Also save errors to history
+          historyService.add({
+            downloadId: job.downloadId,
+            url: job.url,
+            title: job.title,
+            thumbnail: job.thumbnail,
+            filepath: null,
+            filesize: null,
+            status: "error",
+          });
 
-        this.emit({
-          type: "error",
-          downloadId: job.downloadId,
-          error: data.error,
-        });
+          this.emit({
+            type: "error",
+            downloadId: job.downloadId,
+            error: data.error,
+          });
 
-        // Continue queue despite error
-        this.processNext();
-      },
+          // Continue queue despite error
+          this.processNext();
+        },
 
-      onLog: (line) => {
-        this.emit({
-          type: "log",
-          downloadId: job.downloadId,
-          line,
-        });
-      },
-    });
+        onLog: (line) => {
+          this.emit({
+            type: "log",
+            downloadId: job.downloadId,
+            line,
+          });
+        },
+      });
+    } catch (err) {
+      markDownloadTempComplete(job.tempPath);
+      job.status = "error";
+      job.error = err.message;
+      this.completed.push(job);
+      this.active = null;
+      this.processing = false;
+      this.emit({ type: "error", downloadId: job.downloadId, error: err.message });
+      this.processNext();
+      return;
+    }
 
     this.active.controller = controller;
   }

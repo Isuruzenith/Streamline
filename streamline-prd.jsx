@@ -59,7 +59,7 @@ const sections = [
   },
   {
     id: "openqs",
-    label: "Open Questions",
+    label: "Resolved Decisions",
     icon: "?",
     content: { type: "openqs" },
   },
@@ -330,7 +330,7 @@ const milestones = [
       "WebUI Environment panel in Settings: green/red bulb per dependency, Repair button with live log",
       "Basic URL input → yt-dlp --dump-json preview",
     ],
-    status: { label: "Start here", color: "green" },
+    status: { label: "Complete", color: "green" },
   },
   {
     phase: "M2 — Core Download",
@@ -341,7 +341,7 @@ const milestones = [
       "Rich progress bar + collapsible log",
       "Saves to ~/Downloads",
     ],
-    status: { label: "Core value", color: "blue" },
+    status: { label: "Complete", color: "green" },
   },
   {
     phase: "M3 — Queue & Playlist",
@@ -352,7 +352,7 @@ const milestones = [
       "Download history tab",
       "Completion notifications",
     ],
-    status: { label: "UX polish", color: "orange" },
+    status: { label: "Complete", color: "green" },
   },
   {
     phase: "M4 — Full Feature Parity",
@@ -364,7 +364,7 @@ const milestones = [
       "Custom yt-dlp flags input",
       "Filename template editor",
     ],
-    status: { label: "Power features", color: "sand" },
+    status: { label: "Complete", color: "green" },
   },
   {
     phase: "M5 — Open Source Launch",
@@ -375,7 +375,7 @@ const milestones = [
       "npm / bun publish pipeline",
       "Demo GIF + landing page",
     ],
-    status: { label: "Ship it", color: "green" },
+    status: { label: "Complete", color: "green" },
   },
 ];
 
@@ -383,32 +383,32 @@ const openQuestions = [
   {
     q: "Python provisioning strategy",
     detail:
-      "RESOLVED: Streamline downloads python-build-standalone (indygreg) into ~/.streamline/python/ during bun install. No system Python required. No admin rights. System Python is always ignored. The only open sub-question is the GitHub release download URL strategy — should Streamline pin to a specific Python 3.11.x patch version or always resolve latest 3.11.x from the releases API?",
+      "RESOLVED: Streamline downloads python-build-standalone (indygreg) into ~/.streamline/python/ during bun install. The release is pinned to Python 3.11.9 for reproducible installs. No system Python is required, no admin rights are needed, and the bundled venv is always preferred.",
     options: ["Pin to Python 3.11.9 (stable, predictable)", "Always resolve latest 3.11.x from GitHub releases API", "Pin major.minor (3.11), auto-resolve patch on install"],
     priority: "P1",
   },
   {
     q: "ffmpeg acquisition on Windows",
     detail:
-      "imageio[ffmpeg] via pip works cross-platform but gives an older ffmpeg build. Alternatively, download the official static binary from ffmpeg.org. Which takes priority?",
+      "RESOLVED: Streamline installs ffmpeg via imageio[ffmpeg] for cross-platform setup and falls back to a system ffmpeg binary if the bundled path is unavailable.",
     options: ["imageio[ffmpeg] via pip (simple)", "Download official static binary (better quality)", "Detect system ffmpeg first, fallback to pip"],
     priority: "P0",
   },
   {
     q: "WebUI port conflict handling",
-    detail: "Streamline will default to localhost:7979. What happens if that port is taken? Auto-increment? Let user configure?",
+    detail: "RESOLVED: Streamline defaults to localhost:7979 and auto-increments through the next available local ports when the default is already taken.",
     options: ["Auto-increment port (7979 → 7980 → ...)", "Show error with manual --port flag hint", "Configurable via streamline.config.json"],
     priority: "P1",
   },
   {
     q: "yt-dlp update strategy",
-    detail: "yt-dlp releases frequently (sites break often). Should Streamline auto-update yt-dlp on launch, or notify the user?",
+    detail: "RESOLVED: Streamline does not silently auto-update on launch. The Environment repair flow reruns provisioning and upgrades yt-dlp inside the managed venv.",
     options: ["Auto-update yt-dlp silently on every launch", "Check weekly, notify user", "Manual 'Update' button in Settings"],
     priority: "P1",
   },
   {
     q: "Browser cookie passthrough security",
-    detail: "Extracting cookies from Chrome/Firefox requires filesystem access to the cookie database. This is sensitive. How is this communicated to the user?",
+    detail: "RESOLVED: Streamline supports both cookies.txt upload and browser import. The settings panel shows a clear security warning and keeps cookies local at ~/.streamline/cookies.txt.",
     options: ["Show clear privacy notice before enabling", "Only support cookie file import (safer)", "Both: file import + browser extract with warning"],
     priority: "P1",
   },
@@ -419,7 +419,7 @@ function OverviewContent() {
     <div>
       <div style={{ marginBottom: "28px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px", flexWrap: "wrap" }}>
-          <Badge color="green">v0.1 — Draft</Badge>
+          <Badge color="green">v0.1 — Complete</Badge>
           <Badge color="sand">Open Source</Badge>
           <Badge color="blue">Cross-platform</Badge>
           <Badge color="orange">Bun-powered</Badge>
@@ -896,7 +896,7 @@ function OpenQsContent() {
   return (
     <div>
       <p style={{ fontSize: "13px", color: "#9a9494", lineHeight: "1.7", fontFamily: "'DM Sans', sans-serif", marginBottom: "20px" }}>
-        These decisions need to be made before or during M1. Click each to expand options.
+        These implementation decisions are now resolved. Click each to see the selected approach and alternatives.
       </p>
       {openQuestions.map((q, i) => (
         <div key={q.q} style={{ marginBottom: "8px" }}>

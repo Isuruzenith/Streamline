@@ -4,6 +4,8 @@ import FormatPicker from "@/components/FormatPicker";
 import DownloadButton from "@/components/DownloadButton";
 import PlaylistPanel from "@/components/PlaylistPanel";
 import QueuePanel from "@/components/QueuePanel";
+import LiveLogs from "@/components/LiveLogs";
+import DownloadOptions from "@/components/DownloadOptions";
 import useStore from "@/hooks/useStore";
 
 export default function DownloadPage() {
@@ -25,44 +27,55 @@ export default function DownloadPage() {
         <div className="h-px bg-border" />
       </div>
 
-      {/* URL Input */}
-      <div className="mb-6">
-        <URLInput />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_430px]">
+        <div className="min-w-0">
+          {/* URL Input */}
+          <div className="mb-6">
+            <URLInput />
+          </div>
+
+          {/* Playlist mode */}
+          {isPlaylist && (
+            <div className="mb-6">
+              <PlaylistPanel />
+            </div>
+          )}
+
+          {/* Single video mode */}
+          {mediaInfo && !isPlaylist && (
+            <>
+              {/* Media Preview */}
+              <div className="mb-6">
+                <MediaPreview />
+              </div>
+            </>
+          )}
+
+          {/* Queue / Active / Recent downloads */}
+          {hasDownloads && (
+            <div className="mb-6">
+              <QueuePanel />
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-0">
+          {mediaInfo && !isPlaylist && (
+            <>
+              <div className="mb-6">
+                <FormatPicker />
+              </div>
+              <div className="mb-6">
+                <DownloadOptions />
+              </div>
+              <div className="mb-6">
+                <DownloadButton />
+              </div>
+            </>
+          )}
+          <LiveLogs />
+        </div>
       </div>
-
-      {/* Playlist mode */}
-      {isPlaylist && (
-        <div className="mb-6">
-          <PlaylistPanel />
-        </div>
-      )}
-
-      {/* Single video mode */}
-      {mediaInfo && !isPlaylist && (
-        <>
-          {/* Media Preview */}
-          <div className="mb-6">
-            <MediaPreview />
-          </div>
-
-          {/* Format Picker */}
-          <div className="mb-6">
-            <FormatPicker />
-          </div>
-
-          {/* Download Button */}
-          <div className="mb-6">
-            <DownloadButton />
-          </div>
-        </>
-      )}
-
-      {/* Queue / Active / Recent downloads */}
-      {hasDownloads && (
-        <div className="mb-6">
-          <QueuePanel />
-        </div>
-      )}
     </div>
   );
 }

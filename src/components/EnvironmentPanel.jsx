@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   RefreshCw,
   Loader2,
@@ -28,8 +28,15 @@ const DEPS = [
     key: "ffmpeg",
     label: "ffmpeg",
     icon: "🎞",
-    okNote: "Static binary bundled via imageio[ffmpeg]. Used for merging streams and format conversion.",
-    failNote: "Click Repair to reinstall ffmpeg via imageio[ffmpeg] inside the venv.",
+    okNote: "Bundled binary used for merging streams and format conversion.",
+    failNote: "Click Repair to reinstall the bundled ffmpeg tools.",
+  },
+  {
+    key: "ffprobe",
+    label: "ffprobe",
+    icon: "ff",
+    okNote: "Bundled next to ffmpeg for metadata and postprocessing checks.",
+    failNote: "Click Repair to reinstall the bundled ffmpeg tools.",
   },
 ];
 
@@ -39,12 +46,59 @@ export default function EnvironmentPanel() {
   const envRepairing = useStore((s) => s.envRepairing);
   const fetchEnv = useStore((s) => s.fetchEnv);
   const repairEnv = useStore((s) => s.repairEnv);
+  const showToast = useStore((s) => s.showToast);
+  const [updating, setUpdating] = useState(null);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [availableUpdates, setAvailableUpdates] = useState([]);
 
   useEffect(() => {
     fetchEnv();
   }, []);
 
   const hasErrors = env && Object.values(env).some((dep) => !dep.ok);
+
+  const updateDependency = async (dependency) => {
+    setUpdating(dependency);
+    try {
+      const res = await fetch("/api/env/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dependency }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Update failed");
+      }
+      useStore.setState({ env: data.env });
+      showToast(`${dependency === "ytdlp" ? "yt-dlp" : "ffmpeg"} updated`, "success");
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const checkUpdates = async () => {
+    setCheckingUpdates(true);
+    try {
+      const res = await fetch("/api/env/updates");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Could not check updates");
+      }
+      setAvailableUpdates(data.outdated || []);
+      showToast(
+        data.outdated?.length
+          ? `${data.outdated.length} update${data.outdated.length === 1 ? "" : "s"} available`
+          : "Dependencies are up to date",
+        "info"
+      );
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setCheckingUpdates(false);
+    }
+  };
 
   if (envLoading && !env) {
     return (
@@ -146,6 +200,67 @@ export default function EnvironmentPanel() {
           );
         })}
       </div>
+
+      {/* Update controls */}
+      <div className="mt-5 grid gap-2 sm:grid-cols-3">
+        <button
+          onClick={() => updateDependency("ytdlp")}
+          disabled={!!updating || envRepairing}
+          className="sl-btn sl-btn-outline text-xs"
+        >
+          {updating === "ytdlp" ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <RefreshCw size={12} />
+          )}
+          Update yt-dlp
+        </button>
+        <button
+          onClick={() => updateDependency("ffmpeg")}
+          disabled={!!updating || envRepairing}
+          className="sl-btn sl-btn-outline text-xs"
+        >
+          {updating === "ffmpeg" ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <RefreshCw size={12} />
+          )}
+          Update ffmpeg
+        </button>
+        <button
+          onClick={checkUpdates}
+          disabled={checkingUpdates || !!updating}
+          className="sl-btn sl-btn-outline text-xs"
+        >
+          {checkingUpdates ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <RefreshCw size={12} />
+          )}
+          Check updates
+        </button>
+      </div>
+
+      {availableUpdates.length > 0 && (
+        <div className="mt-3 rounded-md border border-status-orange/20 bg-status-orange-bg p-3">
+          <div className="text-xs font-mono text-status-orange mb-2">
+            Updates available
+          </div>
+          <div className="space-y-1">
+            {availableUpdates.map((pkg) => (
+              <div
+                key={pkg.name}
+                className="flex items-center justify-between gap-3 text-xs text-text-muted"
+              >
+                <span className="font-mono">{pkg.name}</span>
+                <span className="font-mono text-text-dim">
+                  {pkg.version}{" -> "}{pkg.latest_version}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Refresh button */}
       <button

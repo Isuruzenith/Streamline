@@ -1,4 +1,9 @@
-import { getFormats, detectPlaylist, getPlaylistInfo } from "../services/ytdlp.js";
+import {
+  getFormats,
+  detectPlaylist,
+  getPlaylistInfo,
+  isLikelyPlaylistUrl,
+} from "../services/ytdlp.js";
 
 /**
  * Formats API routes.
@@ -18,17 +23,14 @@ export function formatsRoutes(app) {
     }
 
     try {
-      // First check if it's a playlist
-      const isPlaylist = await detectPlaylist(url);
-
-      if (isPlaylist) {
-        const playlistInfo = await getPlaylistInfo(url);
-        return playlistInfo;
+      if (isLikelyPlaylistUrl(url)) {
+        const isPlaylist = await detectPlaylist(url);
+        if (isPlaylist) {
+          return await getPlaylistInfo(url);
+        }
       }
 
-      // Single video
-      const info = await getFormats(url);
-      return info;
+      return await getFormats(url);
     } catch (err) {
       return new Response(
         JSON.stringify({

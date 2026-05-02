@@ -1,1 +1,29 @@
-node_modules
+node_modules/
+
+# Build output
+dist/
+
+# Local environment
+.env
+.env.*
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# Downloaded media artifacts
+*.mp4
+*.mkv
+*.webm
+*.mp3
+*.m4a
+*.opus
+*.aac
+*.flac
+*.wav
+*.srt
+*.vtt
+*.ass
+*.part
+*.ytdl

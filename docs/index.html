@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Streamline - yt-dlp WebUI</title>
+    <meta
+      name="description"
+      content="Streamline is a local, open-source WebUI for yt-dlp with one-command setup, queueing, playlists, cookies, subtitles, metadata, and advanced download controls."
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #141414;
+        --panel: #1c1b1a;
+        --text: #e8e3db;
+        --muted: #a69d93;
+        --faint: #756f69;
+        --accent: #d4c4a6;
+        --line: rgba(255, 255, 255, 0.08);
+        --green: #10b981;
+        --blue: #818cf8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      main {
+        min-height: 100vh;
+      }
+
+      .hero {
+        min-height: 92vh;
+        display: grid;
+        align-items: center;
+        padding: 56px 24px 32px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .hero-inner,
+      .section-inner {
+        width: min(1120px, 100%);
+        margin: 0 auto;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--accent);
+        font-weight: 700;
+        letter-spacing: 0;
+        margin-bottom: 28px;
+      }
+
+      .mark {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        border: 1px solid rgba(212, 196, 166, 0.26);
+        background: rgba(212, 196, 166, 0.08);
+      }
+
+      h1 {
+        max-width: 850px;
+        margin: 0;
+        font-size: clamp(44px, 7vw, 86px);
+        line-height: 0.96;
+        letter-spacing: 0;
+      }
+
+      .lede {
+        max-width: 720px;
+        margin: 26px 0 34px;
+        color: var(--muted);
+        font-size: 19px;
+        line-height: 1.65;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 7px;
+        border: 1px solid var(--line);
+        color: var(--text);
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      .button.primary {
+        background: var(--accent);
+        color: #17130f;
+      }
+
+      .preview {
+        margin-top: 52px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #111;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+      }
+
+      .preview img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      section {
+        padding: 72px 24px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .eyebrow {
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 14px;
+      }
+
+      h2 {
+        margin: 0 0 28px;
+        font-size: 34px;
+        letter-spacing: 0;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .item {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 18px;
+        background: var(--panel);
+      }
+
+      .item h3 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+
+      .item p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .phase {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 18px;
+        padding: 18px 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .phase strong {
+        color: var(--accent);
+      }
+
+      .phase p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      code {
+        color: var(--accent);
+      }
+
+      @media (max-width: 760px) {
+        .hero {
+          min-height: auto;
+          padding-top: 44px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .phase {
+          grid-template-columns: 1fr;
+          gap: 6px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="hero">
+        <div class="hero-inner">
+          <div class="brand">
+            <span class="mark">↓</span>
+            <span>Streamline</span>
+          </div>
+          <h1>Streamline</h1>
+          <p class="lede">
+            A local, open-source WebUI for yt-dlp. Paste a URL, preview the
+            media, choose exactly what to save, and let the queue handle the
+            rest.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="../README.md">Read the README</a>
+            <a class="button" href="../dist/index.html">Open built app</a>
+          </div>
+          <div class="preview">
+            <img src="../public/demo.svg" alt="Streamline app preview" />
+          </div>
+        </div>
+      </div>
+
+      <section>
+        <div class="section-inner">
+          <div class="eyebrow">Features</div>
+          <h2>A calm interface over serious yt-dlp power.</h2>
+          <div class="grid">
+            <div class="item">
+              <h3>Preview and formats</h3>
+              <p>
+                Inspect title, thumbnail, duration, uploader, and every useful
+                video or audio format before downloading.
+              </p>
+            </div>
+            <div class="item">
+              <h3>Queue and playlists</h3>
+              <p>
+                Add many downloads, reorder pending work, select playlist
+                entries, cancel active jobs, and keep a history.
+              </p>
+            </div>
+            <div class="item">
+              <h3>Power options</h3>
+              <p>
+                Subtitles, thumbnails, metadata, chapters, cookies,
+                SponsorBlock, archive files, throttling, and custom flags.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-inner">
+          <div class="eyebrow">Roadmap</div>
+          <h2>All PRD phases are represented in the codebase.</h2>
+          <div class="phase">
+            <strong>M1</strong>
+            <p>Provisioned Python, yt-dlp, ffmpeg, and environment repair.</p>
+          </div>
+          <div class="phase">
+            <strong>M2</strong>
+            <p>Core preview, format selection, download, progress, and logs.</p>
+          </div>
+          <div class="phase">
+            <strong>M3</strong>
+            <p>Queue, playlist selection, history, and notifications.</p>
+          </div>
+          <div class="phase">
+            <strong>M4</strong>
+            <p>Full advanced yt-dlp feature surface through the WebUI.</p>
+          </div>
+          <div class="phase">
+            <strong>M5</strong>
+            <p>Launch docs, CI, and publish automation.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

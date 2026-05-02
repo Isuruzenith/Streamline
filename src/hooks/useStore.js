@@ -50,7 +50,10 @@ const useStore = create((set, get) => ({
         throw new Error(message + detail);
       }
       const data = await res.json();
-      set({ mediaInfo: data, mediaLoading: false, mediaUrl: url });
+      const playlistSelected = data?.is_playlist && Array.isArray(data.entries)
+        ? new Set(data.entries.map((_, index) => index))
+        : new Set();
+      set({ mediaInfo: data, mediaLoading: false, mediaUrl: url, playlistSelected });
     } catch (err) {
       set({ mediaError: err.message, mediaLoading: false });
     }
@@ -75,7 +78,15 @@ const useStore = create((set, get) => ({
   activeDownloadId: null,
 
   startDownload: async (overrideUrl, overrideTitle, overrideThumbnail) => {
-    const { mediaInfo, mediaUrl, selectedFormatId, selectedPreset, outputPath, filenameTemplate } = get();
+    const {
+      mediaInfo,
+      mediaUrl,
+      selectedFormatId,
+      selectedPreset,
+      outputPath,
+      filenameTemplate,
+      downloadOptions,
+    } = get();
 
     const url = overrideUrl || mediaUrl;
     const title = overrideTitle || mediaInfo?.title || "Untitled";
@@ -124,6 +135,7 @@ const useStore = create((set, get) => ({
           thumbnail,
           outputPath: outputPath || null,
           filenameTemplate: filenameTemplate || null,
+          options: downloadOptions,
         }),
       });
       if (!res.ok) {
@@ -164,13 +176,27 @@ const useStore = create((set, get) => ({
     } catch { /* ignore */ }
   },
 
-  reorderDownloads: (fromIndex, toIndex) => {
+  reorderDownloads: async (fromIndex, toIndex) => {
+    const downloadId = get().downloads[fromIndex]?.id;
     set((s) => {
       const downloads = [...s.downloads];
       const [item] = downloads.splice(fromIndex, 1);
       downloads.splice(toIndex, 0, item);
       return { downloads };
     });
+    if (downloadId) {
+      const queuedIndex = get()
+        .downloads
+        .filter((download) => download.status === "queued")
+        .findIndex((download) => download.id === downloadId);
+      try {
+        await fetch("/api/download/reorder", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ downloadId, newIndex: queuedIndex }),
+        });
+      } catch { /* local order already updated */ }
+    }
   },
 
   // ─── Playlist Selection ───────────────────────────────────
@@ -280,9 +306,29 @@ const useStore = create((set, get) => ({
   // ─── Settings ─────────────────────────────────────────────
   outputPath: "",
   filenameTemplate: "%(title)s.%(ext)s",
+  downloadOptions: {
+    audioFormat: "mp3",
+    audioQuality: "0",
+    writeSubtitles: false,
+    writeAutoSubtitles: true,
+    subtitleLanguages: "en.*",
+    subtitleFormat: "srt",
+    writeThumbnail: false,
+    embedMetadata: false,
+    chaptersMode: "embed",
+    sponsorBlock: false,
+    downloadArchive: false,
+    rateLimit: "",
+    concurrentFragments: 4,
+    customFlags: "",
+  },
 
   setOutputPath: (path) => set({ outputPath: path }),
   setFilenameTemplate: (tpl) => set({ filenameTemplate: tpl }),
+  setDownloadOption: (key, value) =>
+    set((s) => ({
+      downloadOptions: { ...s.downloadOptions, [key]: value },
+    })),
 }));
 
 export default useStore;

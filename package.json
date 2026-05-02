@@ -11,19 +11,33 @@
     "dev:frontend": "vite --port 5173",
     "dev:backend": "bun --watch server/index.js",
     "build": "vite build",
+    "ci": "bun run build",
+    "prepublishOnly": "bun run build",
     "start": "bun server/index.js",
     "postinstall": "bun scripts/provision.js"
   },
+  "files": [
+    "bin",
+    "dist",
+    "server",
+    "scripts",
+    "public",
+    "docs",
+    "README.md",
+    "package.json"
+  ],
   "dependencies": {
-    "elysia": "^1.2.0",
     "@elysiajs/cors": "^1.2.0",
     "@elysiajs/static": "^1.2.0",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
+    "clsx": "^2.1.0",
+    "elysia": "^1.2.0",
+    "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "zustand": "^5.0.0",
-    "clsx": "^2.1.0",
     "tailwind-merge": "^2.6.0",
-    "lucide-react": "^0.468.0"
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",

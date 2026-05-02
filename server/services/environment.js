@@ -1,4 +1,4 @@
-import { join, resolve } from "path";
+import { basename, join } from "path";
 import { homedir } from "os";
 import { existsSync, readFileSync } from "fs";
 
@@ -70,6 +70,7 @@ export async function checkEnvironment() {
     python: { ok: false, version: null, path: null, error: null },
     ytdlp: { ok: false, version: null, path: null, error: null },
     ffmpeg: { ok: false, version: null, path: null, error: null },
+    ffprobe: { ok: false, version: null, path: null, error: null },
   };
 
   // Python
@@ -133,6 +134,27 @@ export async function checkEnvironment() {
     result.ffmpeg.error = `ffmpeg not found: ${err.message}`;
   }
 
+  // ffprobe
+  try {
+    const ffprobeBin = resolveFFprobeBin();
+    const proc = Bun.spawn([ffprobeBin, "-version"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const output = await new Response(proc.stdout).text();
+    const exitCode = await proc.exited;
+    if (exitCode === 0) {
+      const versionMatch = output.match(/ffprobe version (\S+)/);
+      result.ffprobe.ok = true;
+      result.ffprobe.version = versionMatch ? versionMatch[1] : "installed";
+      result.ffprobe.path = ffprobeBin;
+    } else {
+      result.ffprobe.error = "ffprobe returned non-zero exit code";
+    }
+  } catch (err) {
+    result.ffprobe.error = `ffprobe not found: ${err.message}`;
+  }
+
   return result;
 }
 
@@ -148,4 +170,55 @@ export function resolveFFmpegBin() {
 
   // Fallback
   return "ffmpeg";
+}
+
+/**
+ * Resolve ffprobe binary path.
+ */
+export function resolveFFprobeBin() {
+  const manifest = readEnvManifest();
+
+  if (manifest?.ffprobePath && existsSync(manifest.ffprobePath)) {
+    return manifest.ffprobePath;
+  }
+
+  const binary = process.platform === "win32" ? "ffprobe.exe" : "ffprobe";
+  if (manifest?.ffmpegLocation) {
+    const candidate = join(manifest.ffmpegLocation, binary);
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return "ffprobe";
+}
+
+/**
+ * Resolve the path to pass to yt-dlp's --ffmpeg-location.
+ * This can be either a directory containing ffmpeg/ffprobe or an ffmpeg binary.
+ */
+export function resolveFFmpegLocation() {
+  const manifest = readEnvManifest();
+
+  if (manifest?.ffmpegLocation && existsSync(manifest.ffmpegLocation)) {
+    return manifest.ffmpegLocation;
+  }
+
+  if (manifest?.ffmpegPath && existsSync(manifest.ffmpegPath)) {
+    return manifest.ffmpegPath;
+  }
+
+  return null;
+}
+
+/**
+ * Resolve the current Bun executable so yt-dlp can use it as a JS runtime.
+ */
+export function resolveBunBin() {
+  const execPath = process.execPath;
+  if (execPath && existsSync(execPath) && basename(execPath).toLowerCase().startsWith("bun")) {
+    return execPath;
+  }
+
+  return null;
 }
