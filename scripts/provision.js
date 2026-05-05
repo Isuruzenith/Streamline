@@ -123,6 +123,35 @@ function installBundledFfmpegTools() {
   };
 }
 
+async function installImageioFfmpegTools(pythonBin) {
+  const imageioFfmpegPath = await runCapture(pythonBin, [
+    "-c",
+    "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())",
+  ]);
+  if (!imageioFfmpegPath || !existsSync(imageioFfmpegPath)) {
+    throw new Error("imageio ffmpeg binary not found");
+  }
+
+  const ffprobe = require("@ffprobe-installer/ffprobe");
+  mkdirSync(FFMPEG_DIR, { recursive: true });
+
+  const ffmpegPath = join(FFMPEG_DIR, getToolBinaryName("ffmpeg"));
+  const ffprobePath = join(FFMPEG_DIR, getToolBinaryName("ffprobe"));
+  copyExecutable(imageioFfmpegPath, ffmpegPath);
+  copyExecutable(ffprobe.path, ffprobePath);
+
+  const ffmpegVersionOutput = await runCapture(ffmpegPath, ["-version"]);
+  const ffmpegVersion = ffmpegVersionOutput.match(/ffmpeg version (\S+)/)?.[1] || "installed";
+
+  return {
+    ffmpegPath,
+    ffprobePath,
+    ffmpegLocation: FFMPEG_DIR,
+    ffmpegVersion,
+    ffprobeVersion: ffprobe.version,
+  };
+}
+
 /**
  * Run a command and stream output.
  */
@@ -256,13 +285,24 @@ async function main() {
   log(dim("▸"), "Writing env manifest...");
 
   let ffmpegTools = null;
-  log(dim("â–¸"), "Installing bundled ffmpeg and ffprobe...");
-  try {
-    ffmpegTools = installBundledFfmpegTools();
-    log(green("âœ“"), `ffmpeg and ffprobe installed at ${dim(FFMPEG_DIR)}`);
-  } catch (err) {
-    log(red("âœ—"), `Failed to install bundled ffmpeg tools: ${err.message}`);
-    log(dim("  â†’"), "Trying imageio ffmpeg and system ffprobe as fallback...");
+  if (existsSync(venvPython)) {
+    log(dim("->"), "Installing current ffmpeg from imageio...");
+    try {
+      ffmpegTools = await installImageioFfmpegTools(venvPython);
+      log(green("OK"), `ffmpeg ${ffmpegTools.ffmpegVersion} installed at ${dim(FFMPEG_DIR)}`);
+    } catch (err) {
+      log(red("X"), `Failed to install imageio ffmpeg: ${err.message}`);
+    }
+  }
+  if (!ffmpegTools) {
+    log(dim("â–¸"), "Installing bundled ffmpeg and ffprobe...");
+    try {
+      ffmpegTools = installBundledFfmpegTools();
+      log(green("âœ“"), `ffmpeg and ffprobe installed at ${dim(FFMPEG_DIR)}`);
+    } catch (err) {
+      log(red("âœ—"), `Failed to install bundled ffmpeg tools: ${err.message}`);
+      log(dim("  â†’"), "Trying imageio ffmpeg and system ffprobe as fallback...");
+    }
   }
 
   let ffmpegPath = ffmpegTools?.ffmpegPath || "ffmpeg";

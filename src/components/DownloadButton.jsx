@@ -8,6 +8,8 @@ export default function DownloadButton() {
   const startDownload = useStore((s) => s.startDownload);
   const downloads = useStore((s) => s.downloads);
   const activeDownloadId = useStore((s) => s.activeDownloadId);
+  const selectedPreset = useStore((s) => s.selectedPreset);
+  const selectedFormatId = useStore((s) => s.selectedFormatId);
 
   const activeDownload = downloads.find((d) => d.id === activeDownloadId);
   const isAnyDownloading = downloads.some(
@@ -15,7 +17,8 @@ export default function DownloadButton() {
   );
   const isDownloading = isAnyDownloading;
   const isComplete = activeDownload?.status === "complete";
-  const disabled = !mediaInfo || mediaLoading || isAnyDownloading;
+  const hasFormatSelection = !!selectedPreset || !!selectedFormatId;
+  const disabled = !mediaInfo || mediaLoading || isAnyDownloading || !hasFormatSelection;
 
   const handleClick = () => {
     if (disabled) return;
@@ -50,7 +53,7 @@ export default function DownloadButton() {
         ) : (
           <>
             <Download size={18} />
-            <span>Download</span>
+            <span>{hasFormatSelection ? "Download" : "Choose Format"}</span>
           </>
         )}
       </button>
