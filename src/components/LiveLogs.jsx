@@ -26,18 +26,15 @@ export default function LiveLogs() {
     null;
 
   const logEntries = useMemo(() => {
-    return downloads
-      .flatMap((download) =>
-        (download.log || []).map((line, index) => ({
-          id: `${download.id}-${index}`,
-          downloadId: download.id,
-          title: download.title,
-          status: download.status,
-          line,
-        }))
-      )
-      .slice(-500);
-  }, [downloads]);
+    if (!activeDownload) return [];
+    return (activeDownload.log || []).map((line, index) => ({
+      id: `${activeDownload.id}-${index}`,
+      downloadId: activeDownload.id,
+      title: activeDownload.title,
+      status: activeDownload.status,
+      line,
+    }));
+  }, [activeDownload?.id, activeDownload?.log, activeDownload?.status, activeDownload?.title]);
 
   useEffect(() => {
     if (logRef.current) {
@@ -76,7 +73,7 @@ export default function LiveLogs() {
       <aside className="lg:sticky lg:top-10">
         <button
           onClick={() => setCollapsed(false)}
-          className="flex w-full items-center justify-between gap-3 rounded-md border border-border bg-[#101010] px-4 py-3 text-left transition-colors hover:border-border-accent hover:bg-surface-hover xl:min-h-[64px]"
+          className="flex w-full items-center justify-between gap-3 rounded-md border border-border bg-log px-4 py-3 text-left transition-colors hover:border-border-accent hover:bg-surface-hover xl:min-h-[64px]"
           aria-label="Expand live logs"
           title="Expand live logs"
         >
@@ -99,7 +96,7 @@ export default function LiveLogs() {
 
   return (
     <aside className="lg:sticky lg:top-10">
-      <div className="rounded-md border border-border bg-[#101010] overflow-hidden">
+      <div className="rounded-md border border-border bg-log overflow-hidden">
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div className="flex items-center gap-2 min-w-0">
             <Terminal size={15} className="text-accent shrink-0" />
@@ -114,6 +111,20 @@ export default function LiveLogs() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {downloads.length > 1 && (
+              <select
+                className="max-w-[150px] rounded border border-border bg-transparent px-1 py-0.5 text-xs font-mono text-text-dim transition-colors hover:border-border-accent"
+                value={activeDownload?.id || ""}
+                onChange={(event) => useStore.setState({ activeDownloadId: event.target.value })}
+                title="Select log source"
+              >
+                {downloads.map((download) => (
+                  <option key={download.id} value={download.id}>
+                    {download.title?.slice(0, 40) || "Untitled"}
+                  </option>
+                ))}
+              </select>
+            )}
             <button
               onClick={copyLogs}
               disabled={activeLogs.length === 0}
@@ -167,7 +178,7 @@ export default function LiveLogs() {
 
         <div
           ref={logRef}
-          className="h-[420px] lg:h-[calc(100vh-240px)] min-h-[320px] overflow-auto bg-[#0b0b0b] px-4 py-3 font-mono text-xs text-text-dim"
+          className="sl-terminal h-[420px] lg:h-[calc(100vh-240px)] min-h-[320px] overflow-auto bg-log px-4 py-3 font-mono text-xs text-text-dim"
         >
           {logEntries.length === 0 ? (
             <div className="flex h-full items-center justify-center text-center">
@@ -192,6 +203,9 @@ export default function LiveLogs() {
                   </div>
                 </div>
               ))}
+              {activeDownload && ["downloading", "merging", "queued"].includes(activeDownload.status) && (
+                <div className="sl-terminal-cursor" aria-hidden="true" />
+              )}
             </div>
           )}
         </div>

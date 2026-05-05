@@ -1,9 +1,26 @@
 {
   "name": "streamline",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Streamline by FlameonLabs - an open-source WebUI for yt-dlp.",
   "author": "FlameonLabs",
   "type": "module",
+  "keywords": [
+    "yt-dlp",
+    "youtube-downloader",
+    "media-downloader",
+    "video-downloader",
+    "webui",
+    "bun",
+    "react"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flameonlabs/streamline.git"
+  },
+  "homepage": "https://github.com/flameonlabs/streamline#readme",
+  "bugs": {
+    "url": "https://github.com/flameonlabs/streamline/issues"
+  },
   "bin": {
     "streamline": "./bin/streamline.js"
   },
@@ -12,7 +29,6 @@
     "dev:frontend": "vite --port 5173",
     "dev:backend": "bun --watch server/index.js",
     "build": "vite build",
-    "build:binaries": "bun scripts/build-binaries.js",
     "ci": "bun run build",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -24,15 +40,21 @@
     "postinstall": "bun scripts/provision.js"
   },
   "files": [
-    "bin",
+    "bin/streamline.js",
     "dist",
-    "server",
-    "scripts",
-    "public",
-    "docs",
+    "server/index.js",
+    "server/routes",
+    "server/services",
+    "server/ws",
+    "scripts/provision.js",
     "README.md",
+    "CHANGELOG.md",
     "package.json"
   ],
+  "engines": {
+    "bun": ">=1.1.0",
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@elysiajs/cors": "^1.2.0",
     "@elysiajs/static": "^1.2.0",

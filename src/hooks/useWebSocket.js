@@ -10,6 +10,8 @@ export default function useWebSocket() {
   const reconnectTimer = useRef(null);
   const reconnectAttempts = useRef(0);
   const hasConnectedOnce = useRef(false);
+  const handleMessageRef = useRef(null);
+  const pollRef = useRef(null);
   const updateDownload = useStore((s) => s.updateDownload);
   const appendLog = useStore((s) => s.appendLog);
   const appendProvisionLog = useStore((s) => s.appendProvisionLog);
@@ -33,6 +35,14 @@ export default function useWebSocket() {
   }, []);
 
   const connect = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.onopen = null;
+      wsRef.current.onmessage = null;
+      wsRef.current.onclose = null;
+      wsRef.current.onerror = null;
+      if (wsRef.current.readyState < 2) wsRef.current.close();
+    }
+
     // Derive WS URL from current location
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     let host = window.location.host;
@@ -56,7 +66,7 @@ export default function useWebSocket() {
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        handleMessage(msg);
+        handleMessageRef.current?.(msg);
       } catch {
         // ignore non-JSON messages
       }
@@ -80,7 +90,7 @@ export default function useWebSocket() {
         case "started":
           updateDownload(msg.downloadId, {
             status: "downloading",
-            progress: msg.progress ?? 0,
+            ...(msg.progress > 0 ? { progress: msg.progress } : {}),
           });
           break;
 
@@ -149,6 +159,10 @@ export default function useWebSocket() {
         case "log":
           if (msg.downloadId && msg.line) {
             appendLog(msg.downloadId, msg.line);
+            const { activeDownloadId } = useStore.getState();
+            if (!activeDownloadId) {
+              useStore.setState({ activeDownloadId: msg.downloadId });
+            }
           }
           break;
 
@@ -184,6 +198,48 @@ export default function useWebSocket() {
     [updateDownload, appendLog, appendProvisionLog, clearProvisionLog, fetchEnv, showToast, sendBrowserNotification]
   );
 
+  useEffect(() => {
+    handleMessageRef.current = handleMessage;
+  }, [handleMessage]);
+
+  const pollFallback = useCallback(() => {
+    const { downloads, updateDownload, appendLog } = useStore.getState();
+    const active = downloads.filter(
+      (d) => d.status === "queued" || d.status === "downloading" || d.status === "merging"
+    );
+    if (active.length === 0) return;
+
+    fetch("/api/download/status")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((status) => {
+        if (!status) return;
+        if (status.active?.downloadId) {
+          updateDownload(status.active.downloadId, {
+            status: status.active.status ?? "downloading",
+            progress: status.active.progress ?? 0,
+            speed: status.active.speed ?? null,
+            eta: status.active.eta ?? null,
+            filesize: status.active.filesize ?? null,
+          });
+        }
+
+        [...(status.queue || status.queued || []), ...(status.completed || [])].forEach((job) => {
+          if (job.downloadId) {
+            updateDownload(job.downloadId, {
+              status: job.status,
+              progress: job.progress ?? (job.status === "complete" ? 100 : 0),
+              speed: job.speed ?? null,
+              eta: job.eta ?? null,
+              filepath: job.filepath ?? null,
+              error: job.error ?? null,
+            });
+            if (job.logLine) appendLog(job.downloadId, job.logLine);
+          }
+        });
+      })
+      .catch(() => {});
+  }, []);
+
   const scheduleReconnect = useCallback(() => {
     const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 10000);
     reconnectAttempts.current += 1;
@@ -197,8 +253,23 @@ export default function useWebSocket() {
     const initialTimer = setTimeout(() => connect(), 300);
     return () => {
       clearTimeout(initialTimer);
-      if (wsRef.current) wsRef.current.close();
+      if (wsRef.current) {
+        wsRef.current.onopen = null;
+        wsRef.current.onmessage = null;
+        wsRef.current.onclose = null;
+        wsRef.current.onerror = null;
+        if (wsRef.current.readyState < 2) wsRef.current.close();
+      }
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
     };
   }, [connect]);
+
+  useEffect(() => {
+    pollRef.current = setInterval(() => {
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        pollFallback();
+      }
+    }, 1500);
+    return () => clearInterval(pollRef.current);
+  }, [pollFallback]);
 }

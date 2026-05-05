@@ -6,6 +6,7 @@ import {
   ChevronUp,
   ExternalLink,
   FileArchive,
+  FileVideo,
   Gauge,
   Image,
   ListTree,
@@ -16,6 +17,7 @@ import {
 import useStore from "@/hooks/useStore";
 
 const AUDIO_FORMATS = ["mp3", "m4a", "opus", "aac", "flac", "wav"];
+const VIDEO_FORMATS = ["mp4", "mkv", "webm", "mov", "avi"];
 const SUBTITLE_FORMATS = ["srt", "vtt", "ass", "best"];
 const FLAG_PRESETS = [
   { label: "Force MP4 container", value: "--merge-output-format mp4" },
@@ -68,6 +70,20 @@ export default function DownloadOptions() {
       </button>
 
       {expanded && <div className="space-y-3 animate-slide-up">
+        <OptionRow icon={FileVideo} title="Video format">
+          <select
+            className="sl-input py-2 text-sm mt-3"
+            value={options.videoFormat || "mp4"}
+            onChange={set("videoFormat")}
+          >
+            {VIDEO_FORMATS.map((format) => (
+              <option key={format} value={format}>
+                {format.toUpperCase()}
+              </option>
+            ))}
+          </select>
+        </OptionRow>
+
         <OptionRow
           icon={Captions}
           title="Subtitles"

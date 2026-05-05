@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Download, Settings, Clock } from "lucide-react";
+import { Download, Settings, Clock, Moon, Sun } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
 import pkg from "../../package.json";
@@ -16,6 +16,8 @@ export default function Sidebar() {
   const downloads = useStore((s) => s.downloads);
   const clearMedia = useStore((s) => s.clearMedia);
   const toggleBatchMode = useStore((s) => s.toggleBatchMode);
+  const theme = useStore((s) => s.theme);
+  const toggleTheme = useStore((s) => s.toggleTheme);
 
   const activeCount = downloads.filter(
     (d) => d.status === "downloading" || d.status === "merging" || d.status === "queued"
@@ -42,7 +44,7 @@ export default function Sidebar() {
   }, [clearMedia, setActivePage, toggleBatchMode]);
 
   return (
-    <aside className="w-[220px] border-r border-border flex flex-col sticky top-0 h-screen overflow-y-auto flex-shrink-0 select-none">
+    <aside className="w-[220px] border-r border-border bg-sidebar flex flex-col sticky top-0 h-screen overflow-y-auto flex-shrink-0 select-none">
       <div className="h-px bg-border-accent opacity-50 flex-shrink-0" />
 
       <div className="px-4 pt-6 pb-5">
@@ -100,6 +102,14 @@ export default function Sidebar() {
       </nav>
 
       <div className="px-4 py-4 border-t border-border space-y-3">
+        <button
+          onClick={toggleTheme}
+          title="Toggle theme"
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-text-dim transition-colors duration-300 hover:border-border-accent hover:text-accent hover:bg-surface-hover"
+        >
+          {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
         <div className="flex flex-wrap gap-1.5">
           <kbd>Mod V</kbd>
           <kbd>Mod B</kbd>

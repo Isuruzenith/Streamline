@@ -10,11 +10,13 @@ import {
   writeFileSync,
 } from "fs";
 
-const STREAMLINE_DIR = join(homedir(), ".streamline");
-const TEMP_DIR = join(STREAMLINE_DIR, "temp");
-const DOWNLOAD_TEMP_DIR = join(TEMP_DIR, "downloads");
+const DEFAULT_DOWNLOAD_DIR = join(homedir(), "Downloads", "Streamline");
 const CLEANUP_DELAY_MS = 60 * 60 * 1000;
 const ACTIVE_STALE_MS = 24 * 60 * 60 * 1000;
+
+function getDownloadTempRoot(outputPath = DEFAULT_DOWNLOAD_DIR) {
+  return join(outputPath || DEFAULT_DOWNLOAD_DIR, "temp");
+}
 
 function safeId(id) {
   const clean = String(id || Date.now()).replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -26,10 +28,10 @@ function activeMarkerPath(tempPath) {
   return join(tempPath, ".active");
 }
 
-export function createDownloadTempDir(downloadId) {
-  cleanupExpiredDownloadTemps();
+export function createDownloadTempDir(downloadId, outputPath) {
+  cleanupExpiredDownloadTemps(Date.now(), outputPath);
 
-  const tempPath = join(DOWNLOAD_TEMP_DIR, safeId(downloadId));
+  const tempPath = join(getDownloadTempRoot(outputPath), safeId(downloadId));
   markDownloadTempActive(tempPath);
   return tempPath;
 }
@@ -68,13 +70,14 @@ export function scheduleDownloadTempCleanup(tempPath, delayMs = CLEANUP_DELAY_MS
   }
 }
 
-export function cleanupExpiredDownloadTemps(now = Date.now()) {
-  if (!existsSync(DOWNLOAD_TEMP_DIR)) return;
+export function cleanupExpiredDownloadTemps(now = Date.now(), outputPath) {
+  const downloadTempDir = getDownloadTempRoot(outputPath);
+  if (!existsSync(downloadTempDir)) return;
 
-  for (const entry of readdirSync(DOWNLOAD_TEMP_DIR, { withFileTypes: true })) {
+  for (const entry of readdirSync(downloadTempDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
 
-    const tempPath = join(DOWNLOAD_TEMP_DIR, entry.name);
+    const tempPath = join(downloadTempDir, entry.name);
     try {
       const stat = statSync(tempPath);
       const marker = activeMarkerPath(tempPath);
@@ -92,6 +95,11 @@ export function cleanupExpiredDownloadTemps(now = Date.now()) {
 
 function removeInactiveTempDir(tempPath) {
   if (existsSync(activeMarkerPath(tempPath))) return;
+  removeTempDir(tempPath);
+}
+
+export function removeDownloadTempDir(tempPath) {
+  if (!tempPath) return;
   removeTempDir(tempPath);
 }
 

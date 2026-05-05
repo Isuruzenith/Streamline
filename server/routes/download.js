@@ -24,7 +24,7 @@ export function downloadRoutes(app) {
       outputPath,
       filenameTemplate,
       options,
-    } = body;
+    } = body ?? {};
 
     if (!url) {
       return new Response(
@@ -48,7 +48,7 @@ export function downloadRoutes(app) {
         thumbnail: thumbnail || null,
         formatId: formatId || null,
         formatType: formatType || null,
-        preset: preset || "best",
+        preset: preset || "best-mp4",
         outputPath: outputPath || null,
         filenameTemplate: filenameTemplate || null,
         options: options || {},
@@ -65,7 +65,8 @@ export function downloadRoutes(app) {
 
   // Get queue status
   app.get("/api/download/status", () => {
-    return downloadQueue.getStatus();
+    const s = downloadQueue.getStatus();
+    return Response.json(s);
   });
 
   // Resume a paused download
@@ -76,7 +77,7 @@ export function downloadRoutes(app) {
 
   // Retry a failed download
   app.post("/api/download/retry", async ({ body }) => {
-    const { id } = body ?? {};
+    const id = body?.id ?? null;
     if (!id) return new Response("Missing id", { status: 400 });
     const result = downloadQueue.retry(id);
     return Response.json({ ok: result });

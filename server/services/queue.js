@@ -2,7 +2,12 @@ import { homedir } from "os";
 import { join } from "path";
 import { startDownload } from "./ytdlp.js";
 import { historyService } from "./history.js";
-import { createDownloadTempDir, markDownloadTempActive, markDownloadTempComplete } from "./temp.js";
+import {
+  createDownloadTempDir,
+  markDownloadTempActive,
+  markDownloadTempComplete,
+  removeDownloadTempDir,
+} from "./temp.js";
 
 /**
  * Sequential download queue.
@@ -37,6 +42,11 @@ class DownloadQueue {
     }
   }
 
+  pushCompleted(job) {
+    this.completed.push(job);
+    if (this.completed.length > 100) this.completed.shift();
+  }
+
   /**
    * Add a download job to the queue.
    */
@@ -59,11 +69,15 @@ class DownloadQueue {
       thumbnail: thumbnail || null,
       formatId: formatId || null,
       formatType: formatType || null,
-      preset: preset || "best",
+      preset: preset || "best-mp4",
       outputPath: outputPath || join(homedir(), "Downloads", "Streamline"),
       filenameTemplate: filenameTemplate || "%(title)s.%(ext)s",
       options: options || {},
       status: "queued",
+      progress: 0,
+      speed: null,
+      eta: null,
+      filesize: null,
       addedAt: Date.now(),
     };
 
@@ -121,15 +135,14 @@ class DownloadQueue {
         });
         this.emit({ type: "paused", downloadId, progress });
       } else {
-        this.completed.push(this.active);
+        this.pushCompleted(this.active);
         this.emit({ type: "error", downloadId, error: "Download cancelled by user" });
       }
 
       this.active = null;
       this.processing = false;
 
-      // Continue to next
-      this.processNext();
+      setTimeout(() => this.processNext(), 0);
       return true;
     }
     // Maybe it's in queue
@@ -226,13 +239,23 @@ class DownloadQueue {
     this.processing = true;
     const job = this.queue.shift();
     this.active = job;
+    this.active.status = "queued";
+    this.active.progress = this.active.progress ?? 0;
+    this.active.speed = this.active.speed ?? null;
+    this.active.eta = this.active.eta ?? null;
     if (job.tempPath) {
       markDownloadTempActive(job.tempPath);
     } else {
-      job.tempPath = createDownloadTempDir(job.downloadId);
+      job.tempPath = createDownloadTempDir(job.downloadId, job.outputPath);
     }
 
     let controller;
+    const finishCurrent = () => {
+      this.active = null;
+      this.processing = false;
+      if (this.queue.length > 0) setTimeout(() => this.processNext(), 0);
+    };
+
     try {
       controller = startDownload({
         url: job.url,
@@ -258,22 +281,25 @@ class DownloadQueue {
         onProgress: (data) => {
           if (this.active?.downloadId === job.downloadId) {
             this.active.status = "downloading";
-            this.active.progress = data.progress;
-            this.active.speed = data.speed;
-            this.active.eta = data.eta;
-            this.active.filesize = data.filesize;
+            this.active.progress = data.progress ?? this.active.progress ?? 0;
+            this.active.speed = data.speed ?? null;
+            this.active.eta = data.eta ?? null;
+            this.active.filesize = data.filesize ?? this.active.filesize ?? null;
           }
           this.emit({
             type: "progress",
             downloadId: job.downloadId,
-            progress: data.progress,
-            speed: data.speed,
-            eta: data.eta,
-            filesize: data.filesize,
+            progress: data.progress ?? this.active?.progress ?? 0,
+            speed: data.speed ?? null,
+            eta: data.eta ?? null,
+            filesize: data.filesize ?? null,
           });
         },
 
         onMerging: () => {
+          if (this.active?.downloadId === job.downloadId) {
+            this.active.status = "merging";
+          }
           this.emit({
             type: "merging",
             downloadId: job.downloadId,
@@ -282,12 +308,11 @@ class DownloadQueue {
 
         onComplete: (data) => {
           if (job.status === "paused" || job.status === "cancelled") return;
-          markDownloadTempComplete(job.tempPath);
           job.status = "complete";
+          job.progress = 100;
           job.filepath = data.filepath;
-          this.completed.push(job);
-          this.active = null;
-          this.processing = false;
+          this.pushCompleted(job);
+          removeDownloadTempDir(job.tempPath);
 
           // Persist to history
           historyService.add({
@@ -307,8 +332,7 @@ class DownloadQueue {
             title: job.title,
           });
 
-          // Process next
-          this.processNext();
+          finishCurrent();
         },
 
         onError: (data) => {
@@ -316,9 +340,7 @@ class DownloadQueue {
           markDownloadTempComplete(job.tempPath);
           job.status = "error";
           job.error = data.error;
-          this.completed.push(job);
-          this.active = null;
-          this.processing = false;
+          this.pushCompleted(job);
 
           // Also save errors to history
           historyService.add({
@@ -337,8 +359,7 @@ class DownloadQueue {
             error: data.error,
           });
 
-          // Continue queue despite error
-          this.processNext();
+          finishCurrent();
         },
 
         onLog: (line) => {
@@ -353,11 +374,9 @@ class DownloadQueue {
       markDownloadTempComplete(job.tempPath);
       job.status = "error";
       job.error = err.message;
-      this.completed.push(job);
-      this.active = null;
-      this.processing = false;
+      this.pushCompleted(job);
       this.emit({ type: "error", downloadId: job.downloadId, error: err.message });
-      this.processNext();
+      finishCurrent();
       return;
     }
 
@@ -368,6 +387,14 @@ class DownloadQueue {
    * Get queue status summary.
    */
   getStatus() {
+    const queue = this.queue.map((j) => ({
+      downloadId: j.downloadId,
+      status: j.status,
+      title: j.title,
+      thumbnail: j.thumbnail,
+      progress: j.progress ?? 0,
+    }));
+
     return {
       active: this.active
         ? {
@@ -375,20 +402,21 @@ class DownloadQueue {
             url: this.active.url,
             title: this.active.title,
             thumbnail: this.active.thumbnail,
-            progress: this.active.progress || 0,
+            status: this.active.status ?? "downloading",
+            progress: this.active.progress ?? 0,
+            speed: this.active.speed ?? null,
+            eta: this.active.eta ?? null,
+            filesize: this.active.filesize ?? null,
           }
         : null,
-      queued: this.queue.map((j) => ({
-        downloadId: j.downloadId,
-        url: j.url,
-        title: j.title,
-        thumbnail: j.thumbnail,
-      })),
+      queue,
+      queued: queue,
       completed: this.completed.slice(-20).map((h) => ({
         downloadId: h.downloadId,
         url: h.url,
         title: h.title,
         status: h.status,
+        progress: h.status === "complete" ? 100 : h.progress ?? 0,
         filepath: h.filepath || null,
         error: h.error || null,
       })),
