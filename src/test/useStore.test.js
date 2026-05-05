@@ -32,6 +32,14 @@ describe("updateDownload", () => {
     expect(downloads.find((download) => download.id === "a").progress).toBe(42);
     expect(downloads.find((download) => download.id === "b").status).toBe("queued");
   });
+
+  it("does not reset live progress when a sparse update reports zero", () => {
+    useStore.setState({
+      downloads: [{ id: "a", status: "downloading", progress: 100 }],
+    });
+    useStore.getState().updateDownload("a", { status: "downloading", progress: 0 });
+    expect(useStore.getState().downloads[0].progress).toBe(100);
+  });
 });
 
 describe("removeDownload", () => {

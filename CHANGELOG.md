@@ -19,7 +19,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Custom yt-dlp flags support
 - Browser notifications on download complete
 - Environment health panel with one-click dependency repair
-- Standalone binary builds for macOS, Linux, and Windows
 - npx-compatible - run without installation
 
 ### Fixed

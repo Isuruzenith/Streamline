@@ -229,6 +229,10 @@ function parseCustomFlags(input) {
   return filtered;
 }
 
+function stripAnsi(input) {
+  return String(input || "").replace(/\x1b\[[0-9;]*m/g, "");
+}
+
 /**
  * Detect whether a URL is a playlist.
  * Uses --flat-playlist --dump-json which outputs one JSON line per entry.
@@ -626,11 +630,15 @@ export function startDownload({
   const stderrLines = [];
 
   const parseDownloadProgress = (line) => {
-    if (!/\[download\]/i.test(line)) return null;
+    const cleanLine = stripAnsi(line);
+    const isYtdlpDownloadLine = /\[download\]/i.test(cleanLine);
+    const isAria2ProgressLine = /\[[^\]]+\bDL:[^\]]+\]/i.test(cleanLine) || /\(\s*\d+(?:\.\d+)?%\s*\)/.test(cleanLine);
+
+    if (!isYtdlpDownloadLine && !isAria2ProgressLine) return null;
 
     const fragMatch =
-      line.match(/Downloading fragment\s+(\d+)\s+of\s+(\d+)/i) ||
-      line.match(/\bfragment\s+(\d+)\s*\/\s*(\d+)/i);
+      cleanLine.match(/Downloading fragment\s+(\d+)\s+of\s+(\d+)/i) ||
+      cleanLine.match(/\bfragment\s+(\d+)\s*\/\s*(\d+)/i);
     if (fragMatch) {
       completedFragments = parseInt(fragMatch[1], 10) - 1;
       totalFragments = parseInt(fragMatch[2], 10);
@@ -638,7 +646,9 @@ export function startDownload({
       return null;
     }
 
-    const percentMatch = line.match(/\[download\]\s+([\d.]+)%/i);
+    const percentMatch =
+      cleanLine.match(/\[download\]\s+([\d.]+)%/i) ||
+      cleanLine.match(/\(\s*([\d.]+)%\s*\)/i);
     if (!percentMatch) return null;
 
     const rawPct = parseFloat(percentMatch[1]);
@@ -664,9 +674,15 @@ export function startDownload({
     }
     lastReportedProgress = overallProgress;
 
-    const filesizeMatch = line.match(/\bof\s+~?\s*([\d.]+\s*(?:GiB|MiB|KiB|B|GB|MB|KB))/i);
-    const speedMatch = line.match(/\bat\s+([\d.]+\s*(?:GiB|MiB|KiB|B|GB|MB|KB)\/s)/i);
-    const etaMatch = line.match(/\bETA\s+(\S+)/i);
+    const filesizeMatch =
+      cleanLine.match(/\bof\s+~?\s*([\d.]+\s*(?:GiB|MiB|KiB|B|GB|MB|KB))/i) ||
+      cleanLine.match(/\/\s*([\d.]+\s*(?:GiB|MiB|KiB|B|GB|MB|KB))\s*\(\s*[\d.]+%\s*\)/i);
+    const speedMatch =
+      cleanLine.match(/\bat\s+([\d.]+\s*(?:GiB|MiB|KiB|B|GB|MB|KB)\/s)/i) ||
+      cleanLine.match(/\bDL:\s*([\d.]+\s*(?:GiB|MiB|KiB|B|GB|MB|KB))/i);
+    const etaMatch =
+      cleanLine.match(/\bETA\s+(\S+)/i) ||
+      cleanLine.match(/\bETA:\s*([^\]\s]+)/i);
 
     return {
       progress: Math.round(overallProgress * 10) / 10,

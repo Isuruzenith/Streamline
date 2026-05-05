@@ -77,6 +77,31 @@ const initialSettings = {
   },
 };
 
+function normalizeDownloadUpdates(download, updates) {
+  if (!Object.prototype.hasOwnProperty.call(updates, "progress")) {
+    return updates;
+  }
+
+  const nextProgress = Number(updates.progress);
+  if (!Number.isFinite(nextProgress)) {
+    const { progress, ...rest } = updates;
+    return rest;
+  }
+
+  const currentStatus = download.status;
+  const nextStatus = updates.status || currentStatus;
+  const isLiveUpdate =
+    (currentStatus === "downloading" || currentStatus === "merging") &&
+    (nextStatus === "downloading" || nextStatus === "merging");
+
+  return {
+    ...updates,
+    progress: isLiveUpdate
+      ? Math.max(Number(download.progress) || 0, nextProgress)
+      : nextProgress,
+  };
+}
+
 /**
  * Global application store using Zustand.
  * Organized into logical slices: ui, media, downloads, environment, toast, history.
@@ -264,7 +289,9 @@ const useStore = create((set, get) => ({
 
   updateDownload: (id, updates) =>
     set((s) => ({
-      downloads: s.downloads.map((d) => (d.id === id ? { ...d, ...updates } : d)),
+      downloads: s.downloads.map((d) =>
+        d.id === id ? { ...d, ...normalizeDownloadUpdates(d, updates) } : d
+      ),
     })),
 
   appendLog: (id, line) =>

@@ -29,7 +29,6 @@
     "dev:frontend": "vite --port 5173",
     "dev:backend": "bun --watch server/index.js",
     "build": "vite build",
-    "build:binaries": "bun scripts/build-binaries.js",
     "ci": "bun run build",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -41,12 +40,13 @@
     "postinstall": "bun scripts/provision.js"
   },
   "files": [
-    "bin",
+    "bin/streamline.js",
     "dist",
-    "server",
-    "scripts",
-    "public",
-    "docs",
+    "server/index.js",
+    "server/routes",
+    "server/services",
+    "server/ws",
+    "scripts/provision.js",
     "README.md",
     "CHANGELOG.md",
     "package.json"

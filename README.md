@@ -134,7 +134,7 @@ streamline/
 │   ├── services/
 │   │   ├── ytdlp.js         # yt-dlp process management + progress parsing
 │   │   ├── queue.js         # Sequential download queue
-│   │   ├── environment.js   # Binary resolution (yt-dlp, ffmpeg, bun)
+│   │   ├── environment.js   # Tool resolution (yt-dlp, ffmpeg, bun)
 │   │   ├── history.js       # Persistent history (JSON file)
 │   │   ├── cookies.js       # Cookie file storage
 │   │   └── temp.js          # Temp directory lifecycle management
@@ -155,8 +155,7 @@ streamline/
 │
 ├── bin/streamline.js        # npx entry point
 ├── scripts/
-│   ├── provision.js         # yt-dlp + ffmpeg setup
-│   └── build-binaries.js    # Standalone binary build
+│   └── provision.js         # yt-dlp + ffmpeg setup
 └── dist/                    # Built frontend (generated)
 ```
 
