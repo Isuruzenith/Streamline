@@ -161,7 +161,7 @@ export default function EnvironmentPanel() {
           </div>
           <div
             ref={logRef}
-            className="max-h-[240px] overflow-y-auto rounded bg-[#101010] p-3 font-mono text-xs leading-relaxed text-text-muted"
+            className="max-h-[240px] overflow-y-auto rounded bg-log p-3 font-mono text-xs leading-relaxed text-text-muted"
           >
             {provisionLog.length > 0 ? (
               provisionLog.map((line, index) => (

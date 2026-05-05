@@ -2,7 +2,9 @@ import { create } from "zustand";
 import { uid } from "@/lib/utils";
 
 const SETTINGS_STORAGE_KEY = "streamline:settings";
+const THEME_STORAGE_KEY = "streamline:theme";
 const DEFAULT_DOWNLOAD_OPTIONS = {
+  videoFormat: "mp4",
   audioFormat: "mp3",
   audioQuality: "0",
   writeSubtitles: false,
@@ -56,6 +58,13 @@ function persistSettings(settings) {
 }
 
 const persistedSettings = readPersistedSettings();
+const initialTheme =
+  typeof localStorage !== "undefined"
+    ? localStorage.getItem(THEME_STORAGE_KEY) || "dark"
+    : "dark";
+if (typeof document !== "undefined") {
+  document.documentElement.setAttribute("data-theme", initialTheme);
+}
 const initialSettings = {
   outputPath: persistedSettings.outputPath || "",
   filenameTemplate: persistedSettings.filenameTemplate || "%(title)s.%(ext)s",
@@ -78,11 +87,25 @@ const useStore = create((set, get) => ({
   settingsTab: "general", // "general" | "environment"
   sidebarCollapsed: false,
   batchMode: false,
+  theme: initialTheme,
 
   setActivePage: (page) => set({ activePage: page }),
   setSettingsTab: (tab) => set({ settingsTab: tab }),
   setBatchMode: (batchMode) => set({ batchMode }),
   toggleBatchMode: () => set((s) => ({ batchMode: !s.batchMode })),
+  setTheme: (theme) => {
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-theme", theme);
+    }
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    }
+    set({ theme });
+  },
+  toggleTheme: () => {
+    const next = get().theme === "dark" ? "light" : "dark";
+    get().setTheme(next);
+  },
 
   // ─── Toast ────────────────────────────────────────────────
   toast: null, // { id, message, type: "success"|"error"|"info", visible }
@@ -224,6 +247,8 @@ const useStore = create((set, get) => ({
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Download request failed" }));
         get().updateDownload(id, { status: "error", error: err.error });
+      } else {
+        get().clearMedia();
       }
     } catch (err) {
       get().updateDownload(id, { status: "error", error: err.message });

@@ -28,9 +28,15 @@ export default function QueuePanel() {
   const completedCount = downloads.filter((d) => d.status === "complete").length;
 
   const clearCompleted = () => {
-    downloads
+    const ids = downloads
       .filter((download) => download.status === "complete")
-      .forEach((download) => removeDownload(download.id));
+      .map((download) => download.id);
+    if (ids.length === 0) return;
+
+    useStore.setState((s) => ({
+      downloads: s.downloads.filter((download) => !ids.includes(download.id)),
+    }));
+    ids.forEach((id) => fetch(`/api/download/${id}`, { method: "DELETE" }).catch(() => {}));
   };
 
   const handleDragStart = (e, index) => {
@@ -189,9 +195,9 @@ function QueueItem({
         />
       )}
 
-      {/* Thumbnail (small) */}
+      {/* Thumbnail */}
       {thumbnail && (
-        <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-surface-hover">
+        <div className="w-24 aspect-video rounded-md overflow-hidden flex-shrink-0 bg-surface-hover border border-border">
           <img src={thumbnail} alt="" className="w-full h-full object-cover" loading="lazy" />
         </div>
       )}
@@ -219,7 +225,7 @@ function QueueItem({
         )}
 
         {/* Stats row for active */}
-        {(isActive || isPaused) && (
+        {(isActive || isPaused || isComplete) && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs font-mono text-text-dim">
             <span>
               {Math.round(progress || 0)}%
@@ -243,7 +249,7 @@ function QueueItem({
               {showLog ? "Hide log" : `Show log (${log.length} lines)`}
             </button>
             {showLog && (
-              <div className="mt-1.5 max-h-32 overflow-auto rounded bg-[#0b0b0b] p-2 font-mono text-2xs text-text-dim leading-relaxed space-y-0.5">
+              <div className="mt-1.5 max-h-32 overflow-auto rounded bg-log p-2 font-mono text-2xs text-text-dim leading-relaxed space-y-0.5">
                 {log.slice(-80).map((line, index) => (
                   <div key={index} className="whitespace-pre-wrap break-words">{line}</div>
                 ))}

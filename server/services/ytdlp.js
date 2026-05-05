@@ -1,8 +1,8 @@
 import { resolveYtdlpBin, resolveFFmpegLocation, resolveBunBin } from "./environment.js";
 import { getCookieArgs } from "./cookies.js";
 import { homedir } from "os";
-import { join } from "path";
-import { existsSync, mkdirSync, statSync } from "fs";
+import { basename, join, resolve } from "path";
+import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from "fs";
 
 const YOUTUBE_AUTH_HINT =
   "YouTube is asking for a fresh signed-in session. In Settings > Cookie authentication, upload a YouTube cookies.txt exported from a private/incognito YouTube session. Normal browser import may not work for YouTube.";
@@ -50,8 +50,77 @@ function ensureDirectory(path) {
   mkdirSync(path, { recursive: true });
 }
 
+function uniqueDestinationPath(outputPath, name) {
+  const parsed = /^(.*?)(\.[^.]+)?$/.exec(name);
+  const stem = parsed?.[1] || name;
+  const ext = parsed?.[2] || "";
+  let candidate = join(outputPath, name);
+  let index = 1;
+
+  while (existsSync(candidate)) {
+    candidate = join(outputPath, `${stem} (${index})${ext}`);
+    index += 1;
+  }
+
+  return candidate;
+}
+
+function movePath(source, destination) {
+  try {
+    renameSync(source, destination);
+  } catch {
+    cpSync(source, destination, { recursive: true });
+    rmSync(source, { recursive: true, force: true });
+  }
+}
+
+function moveTempOutputs(tempPath, outputPath, mainFilepath) {
+  if (!tempPath || !outputPath || !existsSync(tempPath)) return mainFilepath || null;
+
+  ensureDirectory(outputPath);
+  const moved = new Map();
+  const resolvedMain = mainFilepath ? resolve(mainFilepath) : null;
+
+  for (const entry of readdirSync(tempPath, { withFileTypes: true })) {
+    if (entry.name === ".active" || entry.name.endsWith(".part") || entry.name.endsWith(".ytdl")) {
+      continue;
+    }
+
+    const source = join(tempPath, entry.name);
+    const destination = uniqueDestinationPath(outputPath, entry.name);
+    movePath(source, destination);
+    moved.set(resolve(source), destination);
+  }
+
+  if (resolvedMain && moved.has(resolvedMain)) {
+    return moved.get(resolvedMain);
+  }
+
+  if (resolvedMain && !resolvedMain.startsWith(resolve(tempPath))) {
+    return mainFilepath;
+  }
+
+  const mainBasename = mainFilepath ? basename(mainFilepath) : null;
+  if (mainBasename) {
+    for (const [source, destination] of moved.entries()) {
+      if (basename(source) === mainBasename) return destination;
+    }
+  }
+
+  return moved.values().next().value || mainFilepath || null;
+}
+
+function requireYtdlpBin() {
+  const ytdlpBin = resolveYtdlpBin();
+  if (!ytdlpBin) {
+    throw new Error("yt-dlp binary not found. Go to Settings > Environment and click Repair.");
+  }
+  return ytdlpBin;
+}
+
 function getCacheKey(kind, url) {
-  return JSON.stringify({ kind, url, cookies: getCookieArgs() });
+  const cookies = [...getCookieArgs()].sort().join(",");
+  return JSON.stringify({ kind, url, cookies });
 }
 
 function getCached(kind, url) {
@@ -168,7 +237,7 @@ export async function detectPlaylist(url) {
   const cached = getCached("detectPlaylist", url);
   if (cached !== null) return cached;
 
-  const ytdlpBin = resolveYtdlpBin();
+  const ytdlpBin = requireYtdlpBin();
 
   // Quick check: use --flat-playlist to see if multiple entries exist
   const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings", ...getProbeArgs(), ...getJsRuntimeArgs(), ...getCookieArgs()];
@@ -211,7 +280,7 @@ export async function getPlaylistInfo(url) {
   const cached = getCached("playlistInfo", url);
   if (cached) return cached;
 
-  const ytdlpBin = resolveYtdlpBin();
+  const ytdlpBin = requireYtdlpBin();
 
   const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings", ...getProbeArgs(), ...getJsRuntimeArgs(), ...getCookieArgs()];
   args.push("--playlist-items", "1:200");
@@ -286,7 +355,7 @@ export async function getFormats(url) {
   const cached = getCached("formats", url);
   if (cached) return cached;
 
-  const ytdlpBin = resolveYtdlpBin();
+  const ytdlpBin = requireYtdlpBin();
 
   const args = [ytdlpBin, "--dump-json", "--no-warnings", "--no-playlist", ...getProbeArgs(), ...getJsRuntimeArgs(), ...getCookieArgs()];
   args.push(url);
@@ -393,7 +462,7 @@ export function startDownload({
   onError,
   onLog,
 }) {
-  const ytdlpBin = resolveYtdlpBin();
+  const ytdlpBin = requireYtdlpBin();
   const ffmpegLocation = resolveFFmpegLocation();
   const customArgsParsed = parseCustomFlags(options.customFlags);
   const customOverridesFormat = customArgsParsed.some(
@@ -432,6 +501,14 @@ export function startDownload({
     }
   } else if (!customOverridesFormat && preset) {
     switch (preset) {
+      case "best-mp4":
+        args.push(
+          "--format",
+          "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best",
+          "--merge-output-format",
+          "mp4"
+        );
+        break;
       case "best":
         // bestvideo+bestaudio, merge → fallback to single best
         args.push("-f", "bestvideo+bestaudio/best");
@@ -457,15 +534,29 @@ export function startDownload({
     }
   }
 
-  // Final output goes to the user's download folder. yt-dlp scratch files go
-  // into Streamline's temp folder so accidental cwd downloads do not enter Git.
+  const videoFormat = String(options.videoFormat || "").trim().toLowerCase();
+  const validVideoFormats = new Set(["mp4", "mkv", "webm", "mov", "avi"]);
+  const alreadySetsOutputFormat =
+    args.includes("--merge-output-format") || args.includes("--recode-video");
+  if (
+    preset !== "audio" &&
+    formatType !== "audio" &&
+    validVideoFormats.has(videoFormat) &&
+    !alreadySetsOutputFormat
+  ) {
+    args.push("--merge-output-format", videoFormat);
+  }
+
+  // Keep the entire yt-dlp lifecycle in one temp folder. After yt-dlp exits
+  // cleanly, Streamline moves the finished files into the final output folder.
+  const ytdlpHomePath = tempPath || outputPath;
   if (outputPath) {
     ensureDirectory(outputPath);
-    args.push("--paths", `home:${outputPath}`);
   }
-  if (tempPath) {
-    ensureDirectory(tempPath);
-    args.push("--paths", `temp:${tempPath}`);
+  if (ytdlpHomePath) {
+    ensureDirectory(ytdlpHomePath);
+    args.push("--paths", `home:${ytdlpHomePath}`);
+    args.push("--paths", `temp:${ytdlpHomePath}`);
   }
   args.push("-o", filenameTemplate || "%(title)s.%(ext)s");
 
@@ -528,26 +619,75 @@ export function startDownload({
   onStart?.();
 
   let lastFilepath = null;
+  let totalFragments = 0;
+  let completedFragments = 0;
+  let currentFragmentProgress = 0;
+  let lastReportedProgress = 0;
   const stderrLines = [];
 
   const parseDownloadProgress = (line) => {
     if (!/\[download\]/i.test(line)) return null;
 
+    const fragMatch =
+      line.match(/Downloading fragment\s+(\d+)\s+of\s+(\d+)/i) ||
+      line.match(/\bfragment\s+(\d+)\s*\/\s*(\d+)/i);
+    if (fragMatch) {
+      completedFragments = parseInt(fragMatch[1], 10) - 1;
+      totalFragments = parseInt(fragMatch[2], 10);
+      currentFragmentProgress = 0;
+      return null;
+    }
+
     const percentMatch = line.match(/\[download\]\s+([\d.]+)%/i);
     if (!percentMatch) return null;
+
+    const rawPct = parseFloat(percentMatch[1]);
+    currentFragmentProgress = rawPct;
+
+    let overallProgress;
+    if (totalFragments > 1) {
+      overallProgress = Math.min(
+        ((completedFragments + rawPct / 100) / totalFragments) * 100,
+        99
+      );
+      if (rawPct >= 100 && completedFragments < totalFragments) {
+        completedFragments = Math.min(completedFragments + 1, totalFragments);
+      }
+    } else {
+      overallProgress = Math.min(rawPct, 99);
+    }
+
+    overallProgress = Math.max(overallProgress, lastReportedProgress);
+
+    if (Math.abs(overallProgress - lastReportedProgress) < 0.5 && overallProgress < 99) {
+      return null;
+    }
+    lastReportedProgress = overallProgress;
 
     const filesizeMatch = line.match(/\bof\s+~?\s*([\d.]+\s*(?:GiB|MiB|KiB|B|GB|MB|KB))/i);
     const speedMatch = line.match(/\bat\s+([\d.]+\s*(?:GiB|MiB|KiB|B|GB|MB|KB)\/s)/i);
     const etaMatch = line.match(/\bETA\s+(\S+)/i);
 
     return {
-      progress: parseFloat(percentMatch[1]),
+      progress: Math.round(overallProgress * 10) / 10,
       filesize: filesizeMatch ? parseSize(filesizeMatch[1]) : null,
       speed: speedMatch ? parseSize(speedMatch[1]) : null,
       eta: etaMatch ? etaMatch[1] : null,
       line,
     };
   };
+
+  const heartbeatInterval = setInterval(() => {
+    if (lastReportedProgress > 0 && lastReportedProgress < 99) {
+      onProgress?.({
+        progress: lastReportedProgress,
+        speed: null,
+        eta: null,
+        filesize: null,
+        line: null,
+      });
+    }
+  }, 2000);
 
   const processLine = (line, source = "stdout") => {
       const trimmed = line.trim();
@@ -629,8 +769,11 @@ export function startDownload({
       consumeStream(proc.stderr, "stderr"),
     ]);
 
+    clearInterval(heartbeatInterval);
+
     if (exitCode === 0) {
-      onComplete?.({ filepath: lastFilepath });
+      const filepath = moveTempOutputs(tempPath, outputPath, lastFilepath);
+      onComplete?.({ filepath });
     } else {
       const stderrText = stderrLines.join("\n");
       const errorLines = stderrText

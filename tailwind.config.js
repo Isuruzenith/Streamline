@@ -4,30 +4,32 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "#171615",
+        background: "var(--bg)",
         surface: {
-          DEFAULT: "#1F1D1B",
-          hover: "#242220",
-          active: "rgba(214,111,69,0.11)",
+          DEFAULT: "var(--surface)",
+          hover: "var(--surface-hover)",
+          active: "var(--surface-active)",
         },
         border: {
-          DEFAULT: "rgba(230,216,196,0.13)",
-          accent: "rgba(214,111,69,0.26)",
-          strong: "rgba(214,111,69,0.36)",
+          DEFAULT: "var(--border)",
+          accent: "var(--border-accent)",
+          strong: "var(--border-strong)",
         },
         text: {
-          primary: "#FAF7EF",
-          secondary: "#E6D8C4",
-          muted: "#AAA49A",
-          faint: "#938E82",
-          dim: "#716D63",
+          primary: "var(--text-primary)",
+          secondary: "var(--text-secondary)",
+          muted: "var(--text-muted)",
+          faint: "var(--text-faint)",
+          dim: "var(--text-dim)",
         },
         accent: {
-          DEFAULT: "#D66F45",
-          muted: "rgba(214,111,69,0.16)",
-          soft: "rgba(214,111,69,0.09)",
-          glow: "rgba(214,111,69,0.05)",
+          DEFAULT: "var(--accent)",
+          muted: "var(--accent-muted)",
+          soft: "var(--accent-soft)",
+          glow: "var(--accent-glow)",
         },
+        sidebar: "var(--sidebar-bg)",
+        log: "var(--log-bg)",
         status: {
           green: "#5EBE78",
           "green-bg": "rgba(94,190,120,0.12)",
@@ -39,10 +41,10 @@ export default {
           "blue-bg": "rgba(88,183,163,0.12)",
         },
         nav: {
-          DEFAULT: "#938E82",
-          active: "#FAF7EF",
-          icon: "#716D63",
-          "icon-active": "#D66F45",
+          DEFAULT: "var(--nav)",
+          active: "var(--nav-active)",
+          icon: "var(--nav-icon)",
+          "icon-active": "var(--nav-icon-active)",
         },
       },
       fontFamily: {

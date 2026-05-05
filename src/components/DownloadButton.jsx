@@ -10,10 +10,12 @@ export default function DownloadButton() {
   const activeDownloadId = useStore((s) => s.activeDownloadId);
 
   const activeDownload = downloads.find((d) => d.id === activeDownloadId);
-  const isDownloading =
-    activeDownload?.status === "downloading" || activeDownload?.status === "merging";
+  const isAnyDownloading = downloads.some(
+    (d) => d.status === "downloading" || d.status === "merging"
+  );
+  const isDownloading = isAnyDownloading;
   const isComplete = activeDownload?.status === "complete";
-  const disabled = !mediaInfo || mediaLoading || isDownloading;
+  const disabled = !mediaInfo || mediaLoading || isAnyDownloading;
 
   const handleClick = () => {
     if (disabled) return;

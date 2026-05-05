@@ -2,7 +2,7 @@
 
 /**
  * Streamline CLI entry point.
- * Starts the server and opens the browser.
+ * Starts the server, provisions dependencies when needed, and opens the browser.
  */
 
 import { existsSync, readFileSync } from "fs";
@@ -19,29 +19,46 @@ const dim = (s) => `\x1b[2m${s}\x1b[0m`;
 const cyan = (s) => `\x1b[36m${s}\x1b[0m`;
 const bold = (s) => `\x1b[1m${s}\x1b[0m`;
 
+async function runProvision() {
+  console.log(`  ${cyan("->")} Provisioning yt-dlp and ffmpeg...`);
+  const provision = Bun.spawn([process.execPath, "scripts/provision.js"], {
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  const exitCode = await provision.exited;
+  if (exitCode !== 0) {
+    throw new Error("Provisioning failed. Go to Settings > Environment and click Repair.");
+  }
+}
+
 async function main() {
   console.log("");
-  console.log(`  ${cyan("◈")} ${bold("Streamline")}`);
+  console.log(`  ${cyan("*")} ${bold("Streamline")}`);
   console.log("");
 
-  // Check environment
+  let needsProvision = false;
   if (existsSync(ENV_FILE)) {
     try {
       const env = JSON.parse(readFileSync(ENV_FILE, "utf-8"));
-      console.log(`  ${dim("▸")} Reading ${dim(ENV_FILE)}`);
+      console.log(`  ${dim(">")} Reading ${dim(ENV_FILE)}`);
 
       if (env.pythonPath || env.venvPath) {
-        console.log(`  ${green("✓")} Environment healthy`);
+        console.log(`  ${green("OK")} Environment healthy`);
       } else {
-        console.log(`  ${red("⚠")} Some dependencies may be missing`);
-        console.log(`  ${dim("  → Run")} bun scripts/provision.js ${dim("to repair")}`);
+        console.log(`  ${red("!")} Some dependencies may be missing`);
+        needsProvision = true;
       }
     } catch {
-      console.log(`  ${red("⚠")} Could not read env.json`);
+      console.log(`  ${red("!")} Could not read env.json`);
+      needsProvision = true;
     }
   } else {
-    console.log(`  ${red("⚠")} No environment found at ${dim(ENV_FILE)}`);
-    console.log(`  ${dim("  → Run")} bun scripts/provision.js ${dim("to set up")}`);
+    console.log(`  ${red("!")} No environment found at ${dim(ENV_FILE)}`);
+    needsProvision = true;
+  }
+
+  if (needsProvision) {
+    await runProvision();
   }
 
   // Check port availability
@@ -56,7 +73,7 @@ async function main() {
       break;
     } catch {
       console.log(
-        `  ${dim("▸")} Port ${actualPort} is taken, trying ${actualPort + 1}...`
+        `  ${dim(">")} Port ${actualPort} is taken, trying ${actualPort + 1}...`
       );
       actualPort++;
     }
@@ -67,7 +84,7 @@ async function main() {
   process.env.NODE_ENV = "production";
 
   // Start server
-  console.log(`  ${cyan("→")} Starting server on port ${actualPort}...`);
+  console.log(`  ${cyan("->")} Starting server on port ${actualPort}...`);
   console.log("");
 
   await import("../server/index.js");
@@ -82,13 +99,15 @@ async function main() {
           ? ["open", url]
           : ["xdg-open", url];
 
-    Bun.spawn(openCmd, { stdout: "ignore", stderr: "ignore" });
+    setTimeout(() => {
+      Bun.spawn(openCmd, { stdout: "ignore", stderr: "ignore" });
+    }, 1500);
   } catch {
     console.log(`  ${dim("Open in browser:")} ${url}`);
   }
 }
 
 main().catch((err) => {
-  console.error(red(`\n  ✗ Failed to start: ${err.message}\n`));
+  console.error(red(`\n  x Failed to start: ${err.message}\n`));
   process.exit(1);
 });
