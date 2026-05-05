@@ -119,6 +119,14 @@
   }
 
   /* Input */
+  .sl-label {
+    @apply block text-sm font-semibold text-text-secondary font-serif;
+  }
+
+  .sl-hint {
+    @apply mt-1.5 text-xs text-text-dim;
+  }
+
   .sl-input {
     @apply w-full bg-surface border border-border rounded-md px-4 py-3 text-base text-text-primary
       font-sans placeholder:text-text-dim
@@ -196,6 +204,58 @@
     background: linear-gradient(90deg, transparent, #d4c4a6, transparent);
     background-size: 200% 100%;
     animation: progressBar 1.5s ease-in-out infinite;
+  }
+
+  /* Rich progress bar */
+  .sl-progress-rich {
+    @apply relative h-2 w-full overflow-hidden rounded-full bg-surface-hover;
+  }
+
+  .sl-progress-rich-fill {
+    @apply absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out;
+    background: linear-gradient(
+      90deg,
+      var(--color-accent, #d4c4a6) 0%,
+      rgba(212,196,166,0.6) 50%,
+      var(--color-accent, #d4c4a6) 100%
+    );
+    background-size: 200% 100%;
+  }
+
+  .sl-progress-rich-fill[data-state="downloading"] {
+    animation: shimmer 2s linear infinite;
+  }
+
+  .sl-progress-rich-fill[data-state="merging"] {
+    background: linear-gradient(
+      90deg,
+      #f59e0b 0%,
+      rgba(245,158,11,0.6) 50%,
+      #f59e0b 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.2s linear infinite;
+    width: 100% !important;
+  }
+
+  .sl-progress-rich-fill[data-state="complete"] {
+    background: #10b981;
+    animation: none;
+  }
+
+  .sl-progress-rich-fill[data-state="error"] {
+    background: #ef4444;
+    animation: none;
+  }
+
+  /* Speed micro-graph */
+  .sl-speed-graph {
+    @apply flex items-end gap-px h-5 w-16;
+  }
+
+  .sl-speed-graph-bar {
+    @apply flex-1 rounded-sm bg-accent/30 transition-[height] duration-150;
+    min-height: 2px;
   }
 
   .sl-skeleton {
@@ -280,10 +340,10 @@
 
 @keyframes shimmer {
   0% {
-    background-position: -400px 0;
+    background-position: 200% 50%;
   }
   100% {
-    background-position: 400px 0;
+    background-position: -200% 50%;
   }
 }
 

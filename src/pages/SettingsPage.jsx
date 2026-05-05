@@ -36,6 +36,8 @@ export default function SettingsPage() {
   const setOutputPath = useStore((s) => s.setOutputPath);
   const filenameTemplate = useStore((s) => s.filenameTemplate);
   const setFilenameTemplate = useStore((s) => s.setFilenameTemplate);
+  const downloadOptions = useStore((s) => s.downloadOptions);
+  const updateDownloadOption = useStore((s) => s.setDownloadOption);
   const showToast = useStore((s) => s.showToast);
 
   const [cookieStatus, setCookieStatus] = useState(null);
@@ -247,6 +249,24 @@ export default function SettingsPage() {
             <p className="mt-1.5 text-xs text-text-dim">
               Leave empty to use Streamline's default Downloads folder
             </p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="sl-label">Speed limit</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                placeholder="0 = unlimited"
+                value={parseInt(downloadOptions.rateLimit) || ""}
+                onChange={(e) =>
+                  updateDownloadOption("rateLimit", e.target.value ? `${e.target.value}K` : "")
+                }
+                className="sl-input w-28 tabular-nums"
+              />
+              <span className="text-xs text-text-dim font-mono">KB/s</span>
+            </div>
+            <p className="sl-hint">Throttle yt-dlp download bandwidth. 0 means unlimited.</p>
           </div>
 
           {/* Filename template */}

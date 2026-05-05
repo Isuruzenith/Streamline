@@ -120,10 +120,16 @@ const useStore = create((set, get) => ({
         throw new Error(message + detail);
       }
       const data = await res.json();
+      const mediaInfo = data?.is_playlist
+        ? data
+        : {
+            ...data,
+            filesize_approx: data?.filesize_approx ?? data?.filesize ?? null,
+          };
       const playlistSelected = data?.is_playlist && Array.isArray(data.entries)
         ? new Set(data.entries.map((_, index) => index))
         : new Set();
-      set({ mediaInfo: data, mediaLoading: false, mediaUrl: url, playlistSelected });
+      set({ mediaInfo, mediaLoading: false, mediaUrl: url, playlistSelected });
     } catch (err) {
       set({ mediaError: err.message, mediaLoading: false });
     }
@@ -147,6 +153,12 @@ const useStore = create((set, get) => ({
   downloads: [],
   pausedDownloads: [],
   activeDownloadId: null,
+
+  addDownload: (download) =>
+    set((s) => ({
+      downloads: [...s.downloads, { ...download, status: download.status || "queued" }],
+      activeDownloadId: download.id ?? s.activeDownloadId,
+    })),
 
   startDownload: async (overrideUrl, overrideTitle, overrideThumbnail, downloadConfig = {}) => {
     const {
@@ -245,20 +257,40 @@ const useStore = create((set, get) => ({
     })),
 
   removeDownload: async (id) => {
+    set((s) => ({
+      downloads: s.downloads.filter((d) => d.id !== id),
+    }));
+
     // Remove from backend queue
     try {
       await fetch(`/api/download/${id}`, { method: "DELETE" });
     } catch { /* ignore */ }
-
-    set((s) => ({
-      downloads: s.downloads.filter((d) => d.id !== id),
-    }));
   },
 
   cancelDownload: async (id) => {
     try {
       await fetch(`/api/download/${id}`, { method: "DELETE" });
     } catch { /* ignore */ }
+  },
+
+  retryDownload: (id) => {
+    const dl = get().downloads.find((d) => d.id === id);
+    if (!dl) return;
+
+    set((s) => ({
+      downloads: s.downloads.map((d) =>
+        d.id === id ? { ...d, status: "queued", progress: 0, error: null, log: [] } : d
+      ),
+      activeDownloadId: id,
+    }));
+
+    fetch("/api/download/retry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    }).catch(() => {
+      get().showToast("Retry failed - check server logs", "error");
+    });
   },
 
   resumeDownload: async (id) => {

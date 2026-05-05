@@ -333,6 +333,8 @@ export async function getFormats(url) {
       view_count: data.view_count || null,
       like_count: data.like_count || null,
       description: data.description || null,
+      filesize: data.filesize || null,
+      filesize_approx: data.filesize_approx ?? data.filesize ?? null,
       formats: (data.formats || []).map((f) => ({
         format_id: f.format_id,
         ext: f.ext,

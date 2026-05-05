@@ -79,6 +79,9 @@ export default {
         "shrink-x": "shrinkX 5s linear forwards",
         "pulse-soft": "pulseSoft 2s ease-in-out infinite",
         "progress-bar": "progressBar 1.5s ease-in-out infinite",
+        "progress-segment": "progressSegment 0.4s cubic-bezier(0.22,1,0.36,1) forwards",
+        "shimmer": "shimmer 2s linear infinite",
+        "count-up": "countUp 0.2s ease-out forwards",
       },
       keyframes: {
         fadeIn: {
@@ -108,6 +111,19 @@ export default {
         progressBar: {
           "0%": { backgroundPosition: "200% 0" },
           "100%": { backgroundPosition: "-200% 0" },
+        },
+        progressSegment: {
+          "0%": { transform: "scaleX(0)", opacity: "0" },
+          "5%": { opacity: "1" },
+          "100%": { transform: "scaleX(1)", opacity: "1" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "200% 50%" },
+          "100%": { backgroundPosition: "-200% 50%" },
+        },
+        countUp: {
+          "0%": { opacity: "0", transform: "translateY(4px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
       },
     },

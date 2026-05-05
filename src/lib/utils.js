@@ -9,11 +9,13 @@ export function cn(...inputs) {
  * Format bytes into human-readable size
  */
 export function formatBytes(bytes, decimals = 1) {
-  if (!bytes || bytes === 0) return "0 B";
+  if (bytes == null || isNaN(bytes)) return "—";
+  if (bytes === 0) return "0 B";
   const k = 1024;
   const sizes = ["B", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i]}`;
+  if (i === 0) return `${bytes} B`;
+  return `${(bytes / Math.pow(k, i)).toFixed(decimals)} ${sizes[i]}`;
 }
 
 /**

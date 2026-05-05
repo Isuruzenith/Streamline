@@ -1,184 +1,131 @@
-import {
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  FolderOpen,
-  Merge,
-  Play,
-  StopCircle,
-} from "lucide-react";
+import { FolderOpen, StopCircle, Play, RotateCcw } from "lucide-react";
 import useStore from "@/hooks/useStore";
-import { cn, formatBytes } from "@/lib/utils";
+import { formatBytes } from "@/lib/utils";
 import DownloadLog from "./DownloadLog";
-
-// Note: This component is kept for backward compat but QueuePanel is now preferred.
+import SpeedGraph from "./SpeedGraph";
+import DownloadStageIndicator from "./DownloadStageIndicator";
 
 export default function ProgressCard() {
   const downloads = useStore((s) => s.downloads);
   const activeDownloadId = useStore((s) => s.activeDownloadId);
   const cancelDownload = useStore((s) => s.cancelDownload);
   const resumeDownload = useStore((s) => s.resumeDownload);
+  const retryDownload = useStore((s) => s.retryDownload);
 
-  // Show the active download, or the most recent one
   const download =
     downloads.find((d) => d.id === activeDownloadId) ||
     downloads[downloads.length - 1];
 
   if (!download) return null;
 
-  const { status, title, progress, speed, eta, filesize, error, thumbnail } = download;
+  const { status, title, progress, speed, eta, filesize, error, thumbnail, filepath } = download;
   const isActive = status === "downloading" || status === "merging" || status === "queued";
   const isComplete = status === "complete";
   const isError = status === "error";
   const isPaused = status === "paused";
 
-  const statusConfig = {
-    queued: { icon: Loader2, label: "Queued", color: "text-text-dim", dot: "bg-text-dim", spin: false },
-    downloading: {
-      icon: Loader2,
-      label: "Downloading",
-      color: "text-status-blue",
-      dot: "bg-status-blue animate-pulse",
-      spin: true,
-    },
-    merging: {
-      icon: Merge,
-      label: "Merging",
-      color: "text-status-orange",
-      dot: "bg-status-orange",
-      spin: false,
-    },
-    complete: {
-      icon: CheckCircle2,
-      label: "Complete",
-      color: "text-status-green",
-      dot: "bg-status-green",
-      spin: false,
-    },
-    error: {
-      icon: AlertCircle,
-      label: "Failed",
-      color: "text-status-red",
-      dot: "bg-status-red",
-      spin: false,
-    },
-    paused: {
-      icon: StopCircle,
-      label: "Paused",
-      color: "text-status-orange",
-      dot: "bg-status-orange",
-      spin: false,
-    },
-  };
-
-  const cfg = statusConfig[status] || statusConfig.queued;
-  const StatusIcon = cfg.icon;
+  const pct = Math.min(Math.round(progress ?? 0), 100);
 
   return (
-    <div className="sl-card animate-slide-up mt-1">
-      {/* Header */}
-      <div className="flex items-start gap-3 mb-3">
+    <div className="sl-card animate-slide-up mt-1 space-y-4">
+      {/* Header - thumbnail + title + stage pills */}
+      <div className="flex items-start gap-3">
         {thumbnail ? (
-          <div className="w-10 h-10 rounded-2sm overflow-hidden flex-shrink-0 bg-surface border border-border">
+          <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 bg-surface border border-border">
             <img src={thumbnail} alt="" className="w-full h-full object-cover" loading="lazy" />
           </div>
         ) : (
-          <StatusIcon
-            size={18}
-            className={cn(cfg.color, cfg.spin && "animate-spin", "flex-shrink-0 mt-0.5")}
-          />
+          <div className="w-12 h-12 rounded bg-surface border border-border flex-shrink-0" />
         )}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-text-primary font-serif truncate">
-              {title}
-            </h3>
-            <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-2sm border border-border text-xs font-mono flex-shrink-0", cfg.color)}>
-              <span className={cn("w-1.5 h-1.5 rounded-full", cfg.dot)} />
-              {cfg.label}
-            </span>
-          </div>
-
-          {/* Stats row */}
-          {(isActive || isPaused) && (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs font-mono text-text-dim">
-              <span>
-                {Math.round(progress || 0)}%
-                {filesize && <span className="text-text-faint"> of {formatBytes(filesize)}</span>}
-              </span>
-              {status === "downloading" && speed && (
-                <span>
-                  &darr; {formatBytes(speed)}/s
-                  {eta && ` · ETA ${eta}`}
-                </span>
-              )}
-            </div>
-          )}
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <h3 className="text-sm font-semibold text-text-primary font-serif truncate leading-tight">
+            {title}
+          </h3>
+          <DownloadStageIndicator status={status} />
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Rich progress bar */}
       {(isActive || isComplete || isPaused) && (
-        <div className="sl-progress mb-3">
-          {status === "merging" ? (
-            <div className="sl-progress-indeterminate w-full" />
-          ) : (
+        <div className="space-y-2">
+          <div className="sl-progress-rich">
             <div
-              className={cn("sl-progress-fill", status === "downloading" && "animate-progress-bar")}
-              style={{ width: `${Math.min(progress || 0, 100)}%` }}
+              className="sl-progress-rich-fill"
+              data-state={status}
+              style={{ width: `${pct}%` }}
             />
-          )}
+          </div>
+
+          {/* Stats row */}
+          <div className="flex items-center justify-between gap-3 text-xs font-mono text-text-dim">
+            <div className="flex items-center gap-3">
+              <span className="tabular-nums text-text-secondary">
+                {pct}%
+                {filesize ? (
+                  <span className="text-text-dim">
+                    {" "}of {formatBytes(filesize)}
+                  </span>
+                ) : null}
+              </span>
+              {status === "downloading" && speed ? (
+                <span className="flex items-center gap-1.5">
+                  <SpeedGraph speed={speed} active={status === "downloading"} />
+                  <span className="tabular-nums">{"\u2193"} {formatBytes(speed)}/s</span>
+                </span>
+              ) : null}
+            </div>
+            {eta && status === "downloading" && (
+              <span className="tabular-nums text-text-dim">ETA {eta}</span>
+            )}
+          </div>
         </div>
       )}
 
-      {(isActive || isPaused) && (
-        <div className="flex items-center justify-end gap-2 mb-3">
-          {isPaused ? (
-            <button
-              onClick={() => resumeDownload(download.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border border-border text-accent hover:bg-accent-soft transition-colors"
-            >
-              <Play size={12} />
-              Resume
-            </button>
-          ) : (
-            <button
-              onClick={() => cancelDownload(download.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border border-border text-text-dim hover:text-status-red hover:border-status-red/30 transition-colors"
-            >
-              <StopCircle size={12} />
-              Cancel
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Error */}
+      {/* Error detail */}
       {isError && error && (
-        <div className="mt-2 p-3 bg-status-red-bg rounded border border-status-red/20">
-          <p className="text-sm text-status-red/80 font-mono leading-relaxed">
+        <div className="p-3 bg-status-red-bg rounded border border-status-red/20">
+          <p className="text-xs text-status-red/80 font-mono leading-relaxed whitespace-pre-wrap break-words">
             {error}
           </p>
         </div>
       )}
 
-      {/* Complete actions */}
-      {isComplete && download.filepath && (
-        <div className="flex items-center gap-2 mt-1">
+      {/* Action row */}
+      <div className="flex items-center gap-2">
+        {isActive && (
           <button
-            onClick={() => useStore.getState().openFolder(download.filepath)}
+            onClick={() => cancelDownload(download.id)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border border-border text-text-dim hover:text-status-red hover:border-status-red/30 transition-colors"
+          >
+            <StopCircle size={12} /> Cancel
+          </button>
+        )}
+        {isPaused && (
+          <button
+            onClick={() => resumeDownload(download.id)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border border-border text-accent hover:bg-accent-soft transition-colors"
+          >
+            <Play size={12} /> Resume
+          </button>
+        )}
+        {isError && (
+          <button
+            onClick={() => retryDownload?.(download.id)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border border-border text-accent hover:bg-accent-soft transition-colors"
+          >
+            <RotateCcw size={12} /> Retry
+          </button>
+        )}
+        {isComplete && filepath && (
+          <button
+            onClick={() => useStore.getState().openFolder(filepath)}
             className="sl-btn sl-btn-outline text-xs py-1.5 px-3"
           >
-            <FolderOpen size={13} />
-            Open folder
+            <FolderOpen size={13} /> Open folder
           </button>
-          <span className="text-xs font-mono text-text-dim truncate">
-            {download.filepath}
-          </span>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Collapsible log */}
       <DownloadLog downloadId={download.id} />
     </div>
   );

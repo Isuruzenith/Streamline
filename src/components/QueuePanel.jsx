@@ -127,6 +127,8 @@ function QueueItem({
   const openFolder = useStore((s) => s.openFolder);
   const { title, status, progress, speed, eta, error, filepath, thumbnail, filesize } = download;
   const [isHandleGrabbing, setIsHandleGrabbing] = useState(false);
+  const [showLog, setShowLog] = useState(false);
+  const log = useStore((s) => s.downloads.find((d) => d.id === download.id)?.log ?? []);
 
   const isActive = status === "downloading" || status === "merging";
   const isQueued = status === "queued";
@@ -206,17 +208,13 @@ function QueueItem({
           </span>
         </div>
 
-        {/* Progress bar for active */}
         {(isActive || isPaused || isComplete) && (
-          <div className="sl-progress mt-2 h-1.5">
-            {status === "merging" ? (
-              <div className="sl-progress-indeterminate w-full" />
-            ) : (
-              <div
-                className={cn("sl-progress-fill", status === "downloading" && "sl-progress-active")}
-                style={{ width: `${Math.min(progress || 0, 100)}%` }}
-              />
-            )}
+          <div className="sl-progress-rich mt-2">
+            <div
+              className="sl-progress-rich-fill"
+              data-state={status}
+              style={{ width: `${Math.min(progress || 0, 100)}%` }}
+            />
           </div>
         )}
 
@@ -232,6 +230,24 @@ function QueueItem({
                 ↓ {formatBytes(speed)}/s
                 {eta && ` · ETA ${eta}`}
               </span>
+            )}
+          </div>
+        )}
+
+        {log.length > 0 && (
+          <div>
+            <button
+              onClick={() => setShowLog((value) => !value)}
+              className="mt-1 text-2xs font-mono text-text-dim hover:text-accent transition-colors"
+            >
+              {showLog ? "Hide log" : `Show log (${log.length} lines)`}
+            </button>
+            {showLog && (
+              <div className="mt-1.5 max-h-32 overflow-auto rounded bg-[#0b0b0b] p-2 font-mono text-2xs text-text-dim leading-relaxed space-y-0.5">
+                {log.slice(-80).map((line, index) => (
+                  <div key={index} className="whitespace-pre-wrap break-words">{line}</div>
+                ))}
+              </div>
             )}
           </div>
         )}

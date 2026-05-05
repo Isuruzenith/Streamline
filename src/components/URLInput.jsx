@@ -57,6 +57,18 @@ export default function URLInput() {
     inputRef.current?.focus();
   }, []);
 
+  const handleFocus = async () => {
+    if (inputValue) return;
+    try {
+      const text = await navigator.clipboard.readText();
+      if (/^https?:\/\/.+/.test(text.trim())) {
+        setInputValue(text.trim());
+      }
+    } catch {
+      // Clipboard permission denied - silent fail
+    }
+  };
+
   useEffect(() => () => prewarmUrl.cancel(), [prewarmUrl]);
 
   useEffect(() => {
@@ -259,6 +271,7 @@ export default function URLInput() {
                 prewarmUrl(e.target.value);
               }}
               onPaste={handleNativePaste}
+              onFocus={handleFocus}
               onKeyDown={handleKeyDown}
               placeholder="Paste any URL - YouTube, TikTok, Instagram, Twitter/X..."
               disabled={mediaLoading}

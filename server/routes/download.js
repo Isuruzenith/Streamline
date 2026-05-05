@@ -74,6 +74,14 @@ export function downloadRoutes(app) {
     return { success: resumed };
   });
 
+  // Retry a failed download
+  app.post("/api/download/retry", async ({ body }) => {
+    const { id } = body ?? {};
+    if (!id) return new Response("Missing id", { status: 400 });
+    const result = downloadQueue.retry(id);
+    return Response.json({ ok: result });
+  });
+
   // Cancel/remove a download
   app.delete("/api/download/:id", ({ params }) => {
     const removed = downloadQueue.cancel(params.id);

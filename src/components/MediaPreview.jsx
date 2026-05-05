@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Clock, User, Calendar, ExternalLink, Film } from "lucide-react";
 import useStore from "@/hooks/useStore";
-import { formatDuration } from "@/lib/utils";
+import { formatBytes, formatDuration } from "@/lib/utils";
 
 const PLATFORM_LABELS = {
   Youtube: { label: "YouTube", color: "#ff4444" },
@@ -49,6 +49,7 @@ export default function MediaPreview() {
     view_count,
     like_count,
     description,
+    filesize_approx,
   } = mediaInfo;
 
   const formattedDate =
@@ -131,6 +132,11 @@ export default function MediaPreview() {
             <Calendar size={12} className="text-text-dim" />
             <span>{formattedDate}</span>
           </div>
+        )}
+        {filesize_approx && (
+          <span className="sl-badge sl-badge-default">
+            ~{formatBytes(filesize_approx)}
+          </span>
         )}
         {webpage_url && (
           <a
