@@ -17,7 +17,6 @@ export default function Sidebar() {
   const clearMedia = useStore((s) => s.clearMedia);
   const toggleBatchMode = useStore((s) => s.toggleBatchMode);
 
-  // Count active downloads for badge
   const activeCount = downloads.filter(
     (d) => d.status === "downloading" || d.status === "merging" || d.status === "queued"
   ).length;
@@ -45,23 +44,30 @@ export default function Sidebar() {
   return (
     <aside className="w-[220px] border-r border-border flex flex-col sticky top-0 h-screen overflow-y-auto flex-shrink-0 select-none">
       <div className="h-px bg-border-accent opacity-50 flex-shrink-0" />
-      {/* Logo */}
+
       <div className="px-4 pt-6 pb-5">
         <div className="flex items-center gap-2.5 mb-1">
-          <span className="text-xl text-accent">◈</span>
-          <span className="text-lg font-bold text-text-primary font-serif tracking-tight">
-            Streamline
-          </span>
+          <img
+            src="/flameonlabs-icon.svg"
+            alt=""
+            className="h-7 w-7 rounded-sm border border-border-accent bg-background p-0.5"
+          />
+          <div className="min-w-0">
+            <span className="block text-lg font-semibold text-text-primary font-serif tracking-tight leading-none">
+              Streamline
+            </span>
+            <span className="block text-2xs font-mono text-accent tracking-widest uppercase leading-4">
+              by FlameonLabs
+            </span>
+          </div>
         </div>
         <div className="text-2xs font-mono text-text-dim tracking-widest uppercase">
           Media Downloader
         </div>
       </div>
 
-      {/* Divider */}
       <div className="h-px bg-border mx-0 mb-3" />
 
-      {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-0.5">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -93,14 +99,16 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Footer */}
       <div className="px-4 py-4 border-t border-border space-y-3">
         <div className="flex flex-wrap gap-1.5">
           <kbd>Mod V</kbd>
           <kbd>Mod B</kbd>
           <kbd>Esc</kbd>
         </div>
-        <div className="text-2xs font-mono text-text-dim">v{pkg.version}</div>
+        <div className="space-y-1 text-2xs font-mono text-text-dim">
+          <div>v{pkg.version}</div>
+          <div className="text-text-faint">FlameonLabs open source</div>
+        </div>
       </div>
     </aside>
   );

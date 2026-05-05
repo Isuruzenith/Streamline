@@ -60,7 +60,7 @@ class DownloadQueue {
       formatId: formatId || null,
       formatType: formatType || null,
       preset: preset || "best",
-      outputPath: outputPath || join(homedir(), "Downloads"),
+      outputPath: outputPath || join(homedir(), "Downloads", "Streamline"),
       filenameTemplate: filenameTemplate || "%(title)s.%(ext)s",
       options: options || {},
       status: "queued",
@@ -161,6 +161,45 @@ class DownloadQueue {
   }
 
   /**
+   * Retry a failed/completed job by placing it back on the front of the queue.
+   */
+  retry(downloadId) {
+    const completedIndex = this.completed.findIndex((job) => job.downloadId === downloadId);
+    const queuedJob = this.queue.find((job) => job.downloadId === downloadId);
+
+    if (queuedJob) {
+      queuedJob.status = "queued";
+      queuedJob.progress = 0;
+      queuedJob.error = null;
+      this.processNext();
+      return true;
+    }
+
+    if (completedIndex === -1) return false;
+
+    const [job] = this.completed.splice(completedIndex, 1);
+    this.queue.unshift({
+      ...job,
+      status: "queued",
+      progress: 0,
+      speed: null,
+      eta: null,
+      error: null,
+      filepath: null,
+      controller: null,
+      tempPath: null,
+    });
+    this.emit({
+      type: "queue_update",
+      downloadId,
+      position: 1,
+      total: this.queue.length + (this.active ? 1 : 0),
+    });
+    this.processNext();
+    return true;
+  }
+
+  /**
    * Reorder a queued item.
    */
   reorder(downloadId, newIndex) {
@@ -205,8 +244,20 @@ class DownloadQueue {
         filenameTemplate: job.filenameTemplate,
         options: job.options,
 
+        onStart: () => {
+          if (this.active?.downloadId === job.downloadId) {
+            this.active.status = "downloading";
+            this.active.progress = this.active.progress || 0;
+          }
+          this.emit({
+            type: "started",
+            downloadId: job.downloadId,
+          });
+        },
+
         onProgress: (data) => {
           if (this.active?.downloadId === job.downloadId) {
+            this.active.status = "downloading";
             this.active.progress = data.progress;
             this.active.speed = data.speed;
             this.active.eta = data.eta;
@@ -219,7 +270,6 @@ class DownloadQueue {
             speed: data.speed,
             eta: data.eta,
             filesize: data.filesize,
-            line: data.line,
           });
         },
 

@@ -57,6 +57,12 @@ export default function PlaylistPanel() {
         </div>
       </div>
 
+      {mediaInfo.truncated && (
+        <p className="mb-3 px-1 text-xs text-status-orange font-mono">
+          {"\u26a0"} Showing first 200 items. Full playlist will download completely.
+        </p>
+      )}
+
       {/* Selection controls */}
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <button

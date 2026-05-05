@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 120" fill="none">
+  <!-- FlameonLabs Horizontal Lockup — Icon + Wordmark -->
+  
+  <!-- === Icon Mark (scaled to 96px) === -->
+  <g transform="translate(12, 12) scale(0.1875)">
+    <!-- Outer flame stroke -->
+    <path d="M256 96 C200 160, 152 220, 152 296 C152 356, 196 416, 256 416 C316 416, 360 356, 360 296 C360 248, 336 200, 304 152" 
+          stroke="#D66F45" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <!-- Inner flame curve -->
+    <path d="M256 176 C228 216, 208 252, 208 296 C208 332, 228 364, 256 364 C284 364, 304 332, 304 296 C304 268, 292 240, 280 216" 
+          stroke="#D66F45" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <!-- Circuit traces -->
+    <line x1="176" y1="296" x2="336" y2="296" stroke="#151412" stroke-width="12" stroke-linecap="round"/>
+    <line x1="256" y1="296" x2="256" y2="380" stroke="#151412" stroke-width="12" stroke-linecap="round"/>
+    <!-- Central node -->
+    <circle cx="256" cy="296" r="20" fill="#D66F45"/>
+    <circle cx="256" cy="296" r="10" fill="#151412"/>
+    <!-- Terminal nodes -->
+    <circle cx="176" cy="296" r="8" fill="#151412"/>
+    <circle cx="336" cy="296" r="8" fill="#151412"/>
+    <circle cx="256" cy="380" r="8" fill="#151412"/>
+  </g>
+  
+  <!-- === Wordmark === -->
+  <text x="128" y="76" font-family="'Fraunces', Georgia, serif" font-weight="500" font-size="48" letter-spacing="-1.5" fill="#151412">
+    <tspan>Flameon</tspan><tspan fill="#D66F45">Labs</tspan>
+  </text>
+</svg>

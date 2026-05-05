@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Activity, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Merge, Terminal, XCircle } from "lucide-react";
+import { Activity, CheckCircle2, ChevronLeft, ChevronRight, Clipboard, Loader2, Merge, Terminal, Trash2, XCircle } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,8 @@ export default function LiveLogs() {
   const logRef = useRef(null);
   const downloads = useStore((s) => s.downloads);
   const activeDownloadId = useStore((s) => s.activeDownloadId);
+  const showToast = useStore((s) => s.showToast);
+  const clearLogs = useStore((s) => s.clearLogs);
 
   const activeDownload =
     downloads.find((download) => download.id === activeDownloadId) ||
@@ -45,6 +47,29 @@ export default function LiveLogs() {
 
   const activeConfig = STATUS_CONFIG[activeDownload?.status] || STATUS_CONFIG.queued;
   const ActiveIcon = activeConfig.icon;
+  const activeLogs = activeDownload?.log || [];
+
+  const getLogLineColor = (line) => {
+    if (/ERROR/i.test(line)) return "text-status-red";
+    if (/\[(Merger|ffmpeg)\]/i.test(line)) return "text-status-orange";
+    if (/\[download\]/i.test(line)) return "text-status-green/70";
+    return "text-text-dim";
+  };
+
+  const copyLogs = async () => {
+    try {
+      await navigator.clipboard.writeText(activeLogs.join("\n"));
+      showToast("Logs copied", "success");
+    } catch {
+      showToast("Unable to copy logs", "error");
+    }
+  };
+
+  const clearActiveLogs = () => {
+    if (!activeDownload || activeLogs.length === 0) return;
+    clearLogs(activeDownload.id);
+    showToast("Logs cleared", "info");
+  };
 
   if (collapsed) {
     return (
@@ -89,6 +114,24 @@ export default function LiveLogs() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={copyLogs}
+              disabled={activeLogs.length === 0}
+              className="hidden sm:flex items-center gap-1.5 rounded border border-border px-2 py-1 text-xs font-mono text-text-dim transition-colors hover:border-border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+              title="Copy logs"
+            >
+              <Clipboard size={12} />
+              Copy logs
+            </button>
+            <button
+              onClick={clearActiveLogs}
+              disabled={activeLogs.length === 0}
+              className="hidden sm:flex items-center gap-1.5 rounded border border-border px-2 py-1 text-xs font-mono text-text-dim transition-colors hover:border-status-red/40 hover:text-status-red disabled:cursor-not-allowed disabled:opacity-40"
+              title="Clear logs"
+            >
+              <Trash2 size={12} />
+              Clear
+            </button>
             {activeDownload && (
               <div className={cn("hidden sm:flex items-center gap-1.5 text-xs font-mono", activeConfig.color)}>
                 <ActiveIcon size={13} className={cn(activeConfig.spin && "animate-spin")} />
@@ -144,7 +187,7 @@ export default function LiveLogs() {
                     <span className={cn("h-1.5 w-1.5 rounded-full", entry.status === "error" ? "bg-status-red" : entry.status === "complete" ? "bg-status-green" : "bg-accent")} />
                     <span className="truncate">{entry.title}</span>
                   </div>
-                  <div className="whitespace-pre-wrap break-words leading-relaxed text-text-muted group-hover:text-text-secondary">
+                  <div className={cn("whitespace-pre-wrap break-words leading-relaxed group-hover:text-text-secondary", getLogLineColor(entry.line))}>
                     {entry.line}
                   </div>
                 </div>

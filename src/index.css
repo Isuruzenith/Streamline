@@ -3,6 +3,22 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-accent: #d66f45;
+    --color-background: #171615;
+    --fl-ember-primary: #d66f45;
+    --fl-ember-active: #b85a36;
+    --fl-ember-soft: #e8a07d;
+    --fl-molten-amber: #e9a84f;
+    --fl-signal-green: #5ebe78;
+    --fl-circuit-teal: #58b7a3;
+    --fl-surface-dark: #171615;
+    --fl-surface-dark-soft: #1f1d1b;
+    --fl-surface-dark-elevated: #242220;
+    --fl-text-on-dark: #faf7ef;
+    --fl-text-on-dark-soft: #aaa49a;
+  }
+
   *,
   *::before,
   *::after {
@@ -13,14 +29,33 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
   }
 
   body {
-    font-family: "DM Sans", sans-serif;
-    background: #141414;
-    color: #e8e3db;
+    font-family: "Inter", sans-serif;
+    background: #171615;
+    color: #faf7ef;
     margin: 0;
     padding: 0;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23noise)' opacity='0.55'/%3E%3C/svg%3E");
+    background-size: 180px 180px;
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
   }
 
   /* Custom scrollbar */
@@ -34,18 +69,18 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(212, 196, 166, 0.15);
+    background: rgba(214, 111, 69, 0.18);
     border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(212, 196, 166, 0.25);
+    background: rgba(214, 111, 69, 0.3);
   }
 
   /* Selection */
   ::selection {
-    background: rgba(212, 196, 166, 0.2);
-    color: #e8e3db;
+    background: rgba(214, 111, 69, 0.25);
+    color: #faf7ef;
   }
 
   kbd {
@@ -95,11 +130,20 @@
   }
 
   /* Input */
+  .sl-label {
+    @apply block text-sm font-semibold text-text-secondary font-serif;
+  }
+
+  .sl-hint {
+    @apply mt-1.5 text-xs text-text-dim;
+  }
+
   .sl-input {
     @apply w-full bg-surface border border-border rounded-md px-4 py-3 text-base text-text-primary
       font-sans placeholder:text-text-dim
       focus:outline-none focus:border-border-accent
       transition-colors duration-150;
+    transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
   }
 
   /* Button */
@@ -107,6 +151,11 @@
     @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md font-sans font-medium text-base
       transition-all duration-200 cursor-pointer
       disabled:opacity-40 disabled:cursor-not-allowed;
+    transition: background 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease, filter 150ms ease;
+  }
+
+  .sl-url-focus-ring:focus-within {
+    box-shadow: 0 0 0 3px rgba(214, 111, 69, 0.12);
   }
 
   .sl-btn-primary {
@@ -145,15 +194,111 @@
 
   .sl-progress-fill {
     @apply absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out;
-    background: linear-gradient(90deg, #d4c4a6, #e8dcc8);
+    background: linear-gradient(90deg, #d66f45, #e9a84f);
     background-size: 200% 100%;
+  }
+
+  .sl-progress-active {
+    background: repeating-linear-gradient(
+      45deg,
+      var(--color-accent) 0px,
+      var(--color-accent) 10px,
+      rgba(232, 160, 125, 0.68) 10px,
+      rgba(232, 160, 125, 0.68) 20px
+    );
+    background-size: 200% 100%;
+    animation: progress-stripes 1s linear infinite;
   }
 
   .sl-progress-indeterminate {
     @apply absolute inset-y-0 rounded-full;
-    background: linear-gradient(90deg, transparent, #d4c4a6, transparent);
+    background: linear-gradient(90deg, transparent, #d66f45, transparent);
     background-size: 200% 100%;
     animation: progressBar 1.5s ease-in-out infinite;
+  }
+
+  /* Rich progress bar */
+  .sl-progress-rich {
+    @apply relative h-2 w-full overflow-hidden rounded-full bg-surface-hover;
+  }
+
+  .sl-progress-rich-fill {
+    @apply absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out;
+    background: linear-gradient(
+      90deg,
+      var(--color-accent, #d66f45) 0%,
+      rgba(232,160,125,0.7) 50%,
+      var(--color-accent, #d66f45) 100%
+    );
+    background-size: 200% 100%;
+  }
+
+  .sl-progress-rich-fill[data-state="downloading"] {
+    animation: shimmer 2s linear infinite;
+  }
+
+  .sl-progress-rich-fill[data-state="merging"] {
+    background: linear-gradient(
+      90deg,
+      #e9a84f 0%,
+      rgba(233,168,79,0.62) 50%,
+      #e9a84f 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.2s linear infinite;
+    width: 100% !important;
+  }
+
+  .sl-progress-rich-fill[data-state="complete"] {
+    background: #5ebe78;
+    animation: none;
+  }
+
+  .sl-progress-rich-fill[data-state="error"] {
+    background: #c74d42;
+    animation: none;
+  }
+
+  /* Speed micro-graph */
+  .sl-speed-graph {
+    @apply flex items-end gap-px h-5 w-16;
+  }
+
+  .sl-speed-graph-bar {
+    @apply flex-1 rounded-sm bg-accent/30 transition-[height] duration-150;
+    min-height: 2px;
+  }
+
+  .sl-skeleton {
+    background: linear-gradient(90deg, #1e1e1e 25%, #262626 50%, #1e1e1e 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s infinite;
+  }
+
+  .sl-size-progress {
+    @apply h-1.5 w-10 overflow-hidden rounded-full;
+    appearance: none;
+  }
+
+  .sl-size-progress::-webkit-progress-bar {
+    @apply bg-surface-hover;
+  }
+
+  .sl-size-progress::-webkit-progress-value,
+  .sl-size-progress::-moz-progress-bar {
+    @apply bg-accent;
+  }
+
+  .sl-pop-in {
+    animation: pop-in 260ms ease-out both;
+  }
+
+  .sl-toast-enter {
+    animation: slide-in-right 220ms ease-out both;
+  }
+
+  .sl-toast-exit {
+    animation: slide-out-right 180ms ease-in both;
   }
 
   /* Collapsible log */
@@ -201,5 +346,60 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 50%;
+  }
+  100% {
+    background-position: -200% 50%;
+  }
+}
+
+@keyframes progress-stripes {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 40px 0;
+  }
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-right {
+  0% {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-right {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(18px);
   }
 }

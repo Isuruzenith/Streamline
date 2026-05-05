@@ -38,6 +38,25 @@ export default function FormatPicker() {
     .filter((f) => (!f.vcodec || f.vcodec === "none") && f.acodec && f.acodec !== "none")
     .sort((a, b) => (b.abr || 0) - (a.abr || 0))
     .slice(0, 6);
+  const largestSize = Math.max(
+    1,
+    ...formats.map((f) => f.filesize || f.filesize_approx || 0)
+  );
+
+  const handleListKeyDown = (list) => (event) => {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    event.preventDefault();
+
+    const currentIndex = list.findIndex((format) => format.format_id === selectedFormatId);
+    const fallbackIndex = event.key === "ArrowDown" ? -1 : 0;
+    const direction = event.key === "ArrowDown" ? 1 : -1;
+    const nextIndex = Math.min(
+      Math.max((currentIndex === -1 ? fallbackIndex : currentIndex) + direction, 0),
+      list.length - 1
+    );
+    const nextFormat = list[nextIndex];
+    if (nextFormat) setSelectedFormatId(nextFormat.format_id);
+  };
 
   return (
     <div className="animate-slide-up">
@@ -53,7 +72,7 @@ export default function FormatPicker() {
               id={`preset-${preset.id}`}
               onClick={() => setSelectedPreset(preset.id)}
               className={cn(
-                "flex items-center gap-2 px-3.5 py-2 text-xs font-mono transition-colors border-r border-border last:border-0",
+                "flex items-center gap-2 px-3.5 py-2 text-xs font-mono transition-all border-r border-border last:border-0 active:scale-[0.97]",
                 isSelected
                   ? "bg-accent-soft text-accent"
                   : "bg-transparent text-text-muted hover:text-text-primary hover:bg-surface-hover"
@@ -91,7 +110,11 @@ export default function FormatPicker() {
               <div className="text-xs font-mono text-text-dim uppercase tracking-widest mb-2 mt-4">
                 Video
               </div>
-              <div className="space-y-1">
+              <div
+                className="space-y-1 rounded-md focus:outline-none focus:ring-2 focus:ring-accent/15"
+                tabIndex={0}
+                onKeyDown={handleListKeyDown(videoFormats)}
+              >
                 {videoFormats.map((f) => (
                   <FormatRow
                     key={f.format_id}
@@ -99,6 +122,7 @@ export default function FormatPicker() {
                     isSelected={selectedFormatId === f.format_id}
                     onSelect={() => setSelectedFormatId(f.format_id)}
                     type="video"
+                    largestSize={largestSize}
                   />
                 ))}
               </div>
@@ -111,7 +135,11 @@ export default function FormatPicker() {
               <div className="text-xs font-mono text-text-dim uppercase tracking-widest mb-2 mt-4">
                 Audio only
               </div>
-              <div className="space-y-1">
+              <div
+                className="space-y-1 rounded-md focus:outline-none focus:ring-2 focus:ring-accent/15"
+                tabIndex={0}
+                onKeyDown={handleListKeyDown(audioFormats)}
+              >
                 {audioFormats.map((f) => (
                   <FormatRow
                     key={f.format_id}
@@ -119,6 +147,7 @@ export default function FormatPicker() {
                     isSelected={selectedFormatId === f.format_id}
                     onSelect={() => setSelectedFormatId(f.format_id)}
                     type="audio"
+                    largestSize={largestSize}
                   />
                 ))}
               </div>
@@ -130,10 +159,11 @@ export default function FormatPicker() {
   );
 }
 
-function FormatRow({ format, isSelected, onSelect, type }) {
+function FormatRow({ format, isSelected, onSelect, type, largestSize }) {
   const { format_id, ext, height, vcodec, acodec, abr, tbr, filesize, filesize_approx } =
     format;
   const size = filesize || filesize_approx;
+  const sizePercent = size ? Math.max(4, Math.min((size / largestSize) * 100, 100)) : 0;
 
   return (
     <button
@@ -190,9 +220,17 @@ function FormatRow({ format, isSelected, onSelect, type }) {
 
       {/* Size */}
       {size && (
-        <span className="text-xs font-mono text-text-faint w-16 text-right">
-          {formatBytes(size)}
-        </span>
+        <div className="flex w-24 flex-shrink-0 items-center gap-2">
+          <progress
+            value={sizePercent}
+            max="100"
+            className="sl-size-progress"
+            aria-label={`${formatBytes(size)} relative file size`}
+          />
+          <span className="text-xs font-mono text-text-faint w-12 text-right">
+            {formatBytes(size)}
+          </span>
+        </div>
       )}
     </button>
   );

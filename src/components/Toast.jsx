@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
@@ -29,24 +30,46 @@ const TEXT_COLORS = {
 export default function Toast() {
   const toast = useStore((s) => s.toast);
   const dismissToast = useStore((s) => s.dismissToast);
+  const [renderedToast, setRenderedToast] = useState(null);
+  const [isExiting, setIsExiting] = useState(false);
 
-  if (!toast) return null;
+  useEffect(() => {
+    if (toast) {
+      setRenderedToast(toast);
+      setIsExiting(false);
+      return;
+    }
 
-  const icon = ICONS[toast.type] || ICONS.info;
+    if (renderedToast) {
+      setIsExiting(true);
+      const timer = window.setTimeout(() => setRenderedToast(null), 180);
+      return () => window.clearTimeout(timer);
+    }
+  }, [toast, renderedToast]);
+
+  if (!renderedToast) return null;
+
+  const handleDismiss = () => {
+    setIsExiting(true);
+    window.setTimeout(dismissToast, 180);
+  };
+
+  const icon = ICONS[renderedToast.type] || ICONS.info;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 animate-slide-in-right">
+    <div className={cn("fixed bottom-6 right-6 z-50", isExiting ? "sl-toast-exit" : "sl-toast-enter")}>
       <div
         className={cn(
           "relative flex items-start gap-3 px-4 py-3.5 rounded-md border shadow-lg backdrop-blur-sm overflow-hidden",
           "max-w-[380px] min-w-[280px]",
-          STYLES[toast.type] || STYLES.info
+          STYLES[renderedToast.type] || STYLES.info,
+          renderedToast.type === "error" && "border-l-2 border-l-status-red"
         )}
       >
         <span
           className={cn(
             "flex-shrink-0 mt-0.5 text-sm font-mono leading-none",
-            ICON_COLORS[toast.type] || ICON_COLORS.info
+            ICON_COLORS[renderedToast.type] || ICON_COLORS.info
           )}
         >
           {icon}
@@ -54,13 +77,13 @@ export default function Toast() {
         <p
           className={cn(
             "text-sm leading-relaxed flex-1 font-sans",
-            TEXT_COLORS[toast.type] || TEXT_COLORS.info
+            TEXT_COLORS[renderedToast.type] || TEXT_COLORS.info
           )}
         >
-          {toast.message}
+          {renderedToast.message}
         </p>
         <button
-          onClick={dismissToast}
+          onClick={handleDismiss}
           className="flex-shrink-0 p-0.5 text-text-dim hover:text-text-muted transition-colors"
           aria-label="Dismiss"
         >
@@ -69,7 +92,7 @@ export default function Toast() {
         <div
           className={cn(
             "absolute bottom-0 left-0 h-px animate-shrink-x",
-            ICON_COLORS[toast.type] || ICON_COLORS.info
+            ICON_COLORS[renderedToast.type] || ICON_COLORS.info
           )}
           style={{ backgroundColor: "currentColor" }}
         />

@@ -1,7 +1,8 @@
 {
   "name": "streamline",
   "version": "0.1.0",
-  "description": "Open-source WebUI for yt-dlp — paste a URL, download anything.",
+  "description": "Streamline by FlameonLabs - an open-source WebUI for yt-dlp.",
+  "author": "FlameonLabs",
   "type": "module",
   "bin": {
     "streamline": "./bin/streamline.js"
@@ -11,7 +12,13 @@
     "dev:frontend": "vite --port 5173",
     "dev:backend": "bun --watch server/index.js",
     "build": "vite build",
+    "build:binaries": "bun scripts/build-binaries.js",
     "ci": "bun run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:server": "bun test server/test/",
     "prepublishOnly": "bun run build",
     "start": "bun server/index.js",
     "postinstall": "bun scripts/provision.js"
@@ -40,12 +47,19 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/bun": "^1.0.0",
     "@vitejs/plugin-react": "^4.3.0",
-    "vite": "^6.0.0",
-    "tailwindcss": "^3.4.0",
-    "postcss": "^8.4.0",
+    "@vitest/coverage-v8": "^4.1.5",
+    "@vitest/ui": "^4.1.5",
     "autoprefixer": "^10.4.0",
     "concurrently": "^9.0.0",
-    "@types/bun": "^1.0.0"
+    "jsdom": "^29.1.1",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "vite": "^6.0.0",
+    "vitest": "^4.1.5"
   }
 }

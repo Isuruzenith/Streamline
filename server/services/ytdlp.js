@@ -8,11 +8,17 @@ const YOUTUBE_AUTH_HINT =
   "YouTube is asking for a fresh signed-in session. In Settings > Cookie authentication, upload a YouTube cookies.txt exported from a private/incognito YouTube session. Normal browser import may not work for YouTube.";
 const SUBTITLE_RATE_LIMIT_HINT =
   "YouTube rate-limited the subtitle request. Turn off Options > Subtitles and retry the video, or wait a while and retry subtitles with fewer subtitle languages.";
-const METADATA_CACHE_TTL_MS = 5 * 60 * 1000;
+const METADATA_CACHE_TTL_MS = 15 * 60 * 1000;
 const metadataCache = new Map();
 
 function getProbeArgs() {
-  return ["--socket-timeout", "10", "--retries", "2", "--extractor-retries", "2"];
+  return [
+    "--socket-timeout", "8",
+    "--retries", "2",
+    "--extractor-retries", "2",
+    "--concurrent-fragments", "1",
+    "--no-check-certificates",
+  ];
 }
 
 function getJsRuntimeArgs() {
@@ -58,7 +64,7 @@ function getCached(kind, url) {
 }
 
 function setCached(kind, url, value) {
-  if (metadataCache.size > 100) {
+  if (metadataCache.size > 250) {
     const oldestKey = metadataCache.keys().next().value;
     metadataCache.delete(oldestKey);
   }
@@ -126,7 +132,32 @@ function parseCustomFlags(input) {
   }
 
   if (current) args.push(current);
-  return args.filter((arg) => arg !== "--exec" && !arg.startsWith("--exec="));
+
+  const blockedFlags = new Set([
+    "--exec",
+    "--config-location",
+    "--plugin-dirs",
+    "--cookies",
+  ]);
+  const filtered = [];
+  let skipNext = false;
+
+  for (const arg of args) {
+    if (skipNext) {
+      skipNext = false;
+      continue;
+    }
+
+    const isBlockedEquals = [...blockedFlags].some((flag) => arg.startsWith(`${flag}=`));
+    if (blockedFlags.has(arg) || isBlockedEquals) {
+      skipNext = blockedFlags.has(arg);
+      continue;
+    }
+
+    filtered.push(arg);
+  }
+
+  return filtered;
 }
 
 /**
@@ -141,6 +172,7 @@ export async function detectPlaylist(url) {
 
   // Quick check: use --flat-playlist to see if multiple entries exist
   const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings", ...getProbeArgs(), ...getJsRuntimeArgs(), ...getCookieArgs()];
+  args.push("--playlist-items", "1:200");
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -182,6 +214,7 @@ export async function getPlaylistInfo(url) {
   const ytdlpBin = resolveYtdlpBin();
 
   const args = [ytdlpBin, "--flat-playlist", "--dump-json", "--no-warnings", ...getProbeArgs(), ...getJsRuntimeArgs(), ...getCookieArgs()];
+  args.push("--playlist-items", "1:200");
   args.push(url);
 
   const proc = Bun.spawn(args, {
@@ -239,6 +272,7 @@ export async function getPlaylistInfo(url) {
     playlist_title: playlistTitle,
     playlist_count: entries.length,
     entries,
+    truncated: entries.length === 200,
   };
   setCached("playlistInfo", url, result);
   return result;
@@ -299,6 +333,8 @@ export async function getFormats(url) {
       view_count: data.view_count || null,
       like_count: data.like_count || null,
       description: data.description || null,
+      filesize: data.filesize || null,
+      filesize_approx: data.filesize_approx ?? data.filesize ?? null,
       formats: (data.formats || []).map((f) => ({
         format_id: f.format_id,
         ext: f.ext,
@@ -335,6 +371,7 @@ export async function getFormats(url) {
  * @param {string} options.filenameTemplate - yt-dlp output template
  * @param {object} options.options - advanced yt-dlp options from the WebUI
  * @param {function} options.onProgress - callback({progress, speed, eta, filesize, line})
+ * @param {function} options.onStart - called when yt-dlp process starts
  * @param {function} options.onMerging - called when merging begins
  * @param {function} options.onComplete - callback({filepath})
  * @param {function} options.onError - callback({error, stderr})
@@ -349,6 +386,7 @@ export function startDownload({
   tempPath,
   filenameTemplate,
   options = {},
+  onStart,
   onProgress,
   onMerging,
   onComplete,
@@ -357,6 +395,10 @@ export function startDownload({
 }) {
   const ytdlpBin = resolveYtdlpBin();
   const ffmpegLocation = resolveFFmpegLocation();
+  const customArgsParsed = parseCustomFlags(options.customFlags);
+  const customOverridesFormat = customArgsParsed.some(
+    (arg) => arg === "-f" || arg === "--format" || arg.startsWith("--format=")
+  );
 
   const args = [
     ytdlpBin,
@@ -369,7 +411,7 @@ export function startDownload({
     "--fragment-retries", "10",
     "--continue",
     ...(preset === "audio" ? ["--no-part"] : []),
-    "--buffer-size", "16K",
+    "--buffer-size", "256K",
     ...getJsRuntimeArgs(),
     ...getCookieArgs(),
   ];
@@ -380,7 +422,7 @@ export function startDownload({
   }
 
   // Format selection
-  if (formatId) {
+  if (!customOverridesFormat && formatId) {
     // If the user selected a video-only format, automatically merge with best audio.
     if (formatType === "video") {
       // video-only stream: merge with best available audio
@@ -388,7 +430,7 @@ export function startDownload({
     } else {
       args.push("-f", formatId);
     }
-  } else if (preset) {
+  } else if (!customOverridesFormat && preset) {
     switch (preset) {
       case "best":
         // bestvideo+bestaudio, merge → fallback to single best
@@ -468,12 +510,12 @@ export function startDownload({
     args.push("--limit-rate", String(options.rateLimit));
   }
 
-  const fragments = Number(options.concurrentFragments || 4);
+  const fragments = Number(options.concurrentFragments || 8);
   if (Number.isFinite(fragments) && fragments > 1) {
     args.push("--concurrent-fragments", String(Math.min(Math.max(Math.floor(fragments), 1), 16)));
   }
 
-  args.push(...parseCustomFlags(options.customFlags));
+  args.push(...customArgsParsed);
 
   args.push("--print", "after_move:filepath");
   args.push(url);
@@ -483,61 +525,54 @@ export function startDownload({
     stderr: "pipe",
   });
 
-  // Stream stdout for progress
-  const reader = proc.stdout.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
+  onStart?.();
+
   let lastFilepath = null;
+  const stderrLines = [];
 
-  const processChunk = (chunk) => {
-    buffer += decoder.decode(chunk, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || ""; // keep incomplete last line
+  const parseDownloadProgress = (line) => {
+    if (!/\[download\]/i.test(line)) return null;
 
-    for (const line of lines) {
+    const percentMatch = line.match(/\[download\]\s+([\d.]+)%/i);
+    if (!percentMatch) return null;
+
+    const filesizeMatch = line.match(/\bof\s+~?\s*([\d.]+\s*(?:GiB|MiB|KiB|B|GB|MB|KB))/i);
+    const speedMatch = line.match(/\bat\s+([\d.]+\s*(?:GiB|MiB|KiB|B|GB|MB|KB)\/s)/i);
+    const etaMatch = line.match(/\bETA\s+(\S+)/i);
+
+    return {
+      progress: parseFloat(percentMatch[1]),
+      filesize: filesizeMatch ? parseSize(filesizeMatch[1]) : null,
+      speed: speedMatch ? parseSize(speedMatch[1]) : null,
+      eta: etaMatch ? etaMatch[1] : null,
+      line,
+    };
+  };
+
+  const processLine = (line, source = "stdout") => {
       const trimmed = line.trim();
-      if (!trimmed) continue;
+      if (!trimmed) return;
+      if (source === "stderr") {
+        stderrLines.push(line);
+        if (stderrLines.length > 500) stderrLines.shift();
+      }
       onLog?.(line);
 
-      if (!trimmed.startsWith("[")) {
+      if (source === "stdout" && !trimmed.startsWith("[")) {
         lastFilepath = trimmed;
-        continue;
+        return;
       }
 
-      // Parse progress: [download]  25.3% of ~  54.21MiB at    3.45MiB/s ETA 00:12
-      const progressMatch = line.match(
-        /\[download\]\s+([\d.]+)%\s+of\s+~?\s*([\d.]+\S+)\s+at\s+([\d.]+\S+)\s+ETA\s+(\S+)/
-      );
-      if (progressMatch) {
-        onProgress?.({
-          progress: parseFloat(progressMatch[1]),
-          filesize: parseSize(progressMatch[2]),
-          speed: parseSize(progressMatch[3]),
-          eta: progressMatch[4],
-          line,
-        });
-        continue;
-      }
-
-      // Simpler progress: [download]  25.3% of 54.21MiB
-      const simpleProgress = line.match(
-        /\[download\]\s+([\d.]+)%\s+of\s+~?\s*([\d.]+\S+)/
-      );
-      if (simpleProgress) {
-        onProgress?.({
-          progress: parseFloat(simpleProgress[1]),
-          filesize: parseSize(simpleProgress[2]),
-          speed: null,
-          eta: null,
-          line,
-        });
-        continue;
+      const progress = parseDownloadProgress(line);
+      if (progress) {
+        onProgress?.(progress);
+        return;
       }
 
       // Merging
       if (line.includes("[Merger]") || line.includes("[ffmpeg]")) {
         onMerging?.();
-        continue;
+        return;
       }
 
       // Destination file
@@ -558,32 +593,46 @@ export function startDownload({
       if (alreadyMatch) {
         lastFilepath = alreadyMatch[1].trim();
       }
-    }
   };
 
-  // Read loop
-  (async () => {
+  const consumeStream = async (stream, source) => {
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        processChunk(value);
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          processLine(line, source);
+        }
       }
     } catch {
       // stream closed
     }
 
-    // Also read stderr
-    const stderrText = await new Response(proc.stderr).text();
-    if (stderrText.trim()) {
-      stderrText.split("\n").forEach((l) => l.trim() && onLog?.(l));
+    buffer += decoder.decode();
+    if (buffer.trim()) {
+      processLine(buffer, source);
     }
+  };
 
-    const exitCode = await proc.exited;
+  // Read stdout and stderr concurrently so progress/logs stay live.
+  (async () => {
+    const [exitCode] = await Promise.all([
+      proc.exited,
+      consumeStream(proc.stdout, "stdout"),
+      consumeStream(proc.stderr, "stderr"),
+    ]);
 
     if (exitCode === 0) {
       onComplete?.({ filepath: lastFilepath });
     } else {
+      const stderrText = stderrLines.join("\n");
       const errorLines = stderrText
         .split("\n")
         .filter((l) => l.includes("ERROR"))

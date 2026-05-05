@@ -5,6 +5,15 @@ import {
   isLikelyPlaylistUrl,
 } from "../services/ytdlp.js";
 
+function isHttpUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Formats API routes.
  *
@@ -18,6 +27,13 @@ export function formatsRoutes(app) {
     if (!url) {
       return new Response(
         JSON.stringify({ error: "Missing 'url' query parameter" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!isHttpUrl(url)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid URL" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
@@ -49,6 +65,13 @@ export function formatsRoutes(app) {
     if (!url) {
       return new Response(
         JSON.stringify({ error: "Missing 'url' query parameter" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!isHttpUrl(url)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid URL" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }

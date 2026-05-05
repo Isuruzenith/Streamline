@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Link2, Clipboard, Loader2, X, Rows3, Plus } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,16 @@ const parseBatchUrls = (text) =>
     .map((url) => url.trim())
     .filter((url) => /^https?:\/\/.+/.test(url));
 
+function debounce(fn, delay) {
+  let timeoutId;
+  const debounced = (...args) => {
+    window.clearTimeout(timeoutId);
+    timeoutId = window.setTimeout(() => fn(...args), delay);
+  };
+  debounced.cancel = () => window.clearTimeout(timeoutId);
+  return debounced;
+}
+
 export default function URLInput() {
   const mediaUrl = useStore((s) => s.mediaUrl);
   const mediaLoading = useStore((s) => s.mediaLoading);
@@ -33,10 +43,33 @@ export default function URLInput() {
   const [validationError, setValidationError] = useState(null);
   const inputRef = useRef(null);
   const batchRef = useRef(null);
+  const prewarmUrl = useMemo(
+    () =>
+      debounce((url) => {
+        if (/^https?:\/\/.{5,}/.test(url)) {
+          fetch(`/api/formats?url=${encodeURIComponent(url)}`).catch(() => {});
+        }
+      }, 600),
+    []
+  );
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  const handleFocus = async () => {
+    if (inputValue) return;
+    try {
+      const text = await navigator.clipboard.readText();
+      if (/^https?:\/\/.+/.test(text.trim())) {
+        setInputValue(text.trim());
+      }
+    } catch {
+      // Clipboard permission denied - silent fail
+    }
+  };
+
+  useEffect(() => () => prewarmUrl.cancel(), [prewarmUrl]);
 
   useEffect(() => {
     if (batchMode) {
@@ -179,7 +212,7 @@ export default function URLInput() {
 
   return (
     <div className="animate-fade-in">
-      <form onSubmit={handleSubmit} className="group">
+      <form onSubmit={handleSubmit} className="group sl-url-focus-ring rounded-md">
         {batchMode ? (
           <div>
             <div className="mb-2 flex items-center justify-between gap-3">
@@ -206,11 +239,9 @@ export default function URLInput() {
                   (validationError || mediaError) && "border-status-red/40"
                 )}
               />
-              {detectedUrls.length > 0 && (
-                <span className="absolute bottom-3 right-3 text-xs font-mono text-accent opacity-70">
-                  {detectedUrls.length} URL{detectedUrls.length !== 1 ? "s" : ""}
-                </span>
-              )}
+              <span className="absolute bottom-3 right-3 text-xs font-mono text-accent opacity-70">
+                {detectedUrls.length} URL{detectedUrls.length !== 1 ? "s" : ""}
+              </span>
             </div>
             <div className="mt-3 flex justify-end">
               <button
@@ -237,13 +268,15 @@ export default function URLInput() {
               onChange={(e) => {
                 setInputValue(e.target.value);
                 setValidationError(null);
+                prewarmUrl(e.target.value);
               }}
               onPaste={handleNativePaste}
+              onFocus={handleFocus}
               onKeyDown={handleKeyDown}
               placeholder="Paste any URL - YouTube, TikTok, Instagram, Twitter/X..."
               disabled={mediaLoading}
               className={cn(
-                "w-full bg-surface border border-border rounded-md pl-11 pr-52 py-3.5",
+                "w-full bg-surface border border-border rounded-md pl-11 pr-52 py-3",
                 "text-base text-text-primary font-sans placeholder:text-text-dim",
                 "focus:outline-none focus:border-border-accent focus:bg-surface-hover",
                 "transition-all duration-200",
@@ -273,7 +306,8 @@ export default function URLInput() {
           {PLATFORMS.map((platform) => (
             <span
               key={platform.name}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-2sm text-xs font-mono border border-border text-text-dim hover:text-text-muted hover:border-border-accent transition-colors cursor-default select-none"
+              title="Supported platform"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-2sm text-xs font-mono border border-border text-text-dim hover:text-text-muted transition-colors cursor-help select-none"
             >
               <span style={{ color: platform.color, fontSize: "9px" }}>{platform.icon}</span>
               {platform.name}

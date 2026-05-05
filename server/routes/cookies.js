@@ -8,6 +8,15 @@ import { saveCookieFile, getCookieStatus, clearCookies, importCookiesFromBrowser
  * DELETE /api/settings/cookies  — Delete cookie file
  */
 export function cookieRoutes(app) {
+  app.post("/api/settings/browse-folder", () => {
+    return new Response(
+      JSON.stringify({
+        error: "Folder browse not available in browser mode - type the path manually",
+      }),
+      { status: 501, headers: { "Content-Type": "application/json" } }
+    );
+  });
+
   // Import cookies directly from a local browser via yt-dlp.
   app.post("/api/settings/cookies/import", async ({ body }) => {
     try {
