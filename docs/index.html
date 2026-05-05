@@ -3,23 +3,24 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Streamline - yt-dlp WebUI</title>
+    <title>Streamline by FlameonLabs - yt-dlp WebUI</title>
     <meta
       name="description"
-      content="Streamline is a local, open-source WebUI for yt-dlp with one-command setup, queueing, playlists, cookies, subtitles, metadata, and advanced download controls."
+      content="Streamline is a FlameonLabs local, open-source WebUI for yt-dlp with queueing, playlists, cookies, subtitles, metadata, and advanced download controls."
     />
     <style>
       :root {
         color-scheme: dark;
-        --bg: #141414;
-        --panel: #1c1b1a;
-        --text: #e8e3db;
-        --muted: #a69d93;
-        --faint: #756f69;
-        --accent: #d4c4a6;
-        --line: rgba(255, 255, 255, 0.08);
-        --green: #10b981;
-        --blue: #818cf8;
+        --bg: #171615;
+        --panel: #1f1d1b;
+        --text: #faf7ef;
+        --muted: #aaa49a;
+        --faint: #716d63;
+        --accent: #d66f45;
+        --accent-soft: #e8a07d;
+        --line: rgba(230, 216, 196, 0.12);
+        --green: #5ebe78;
+        --blue: #58b7a3;
       }
 
       * {
@@ -64,13 +65,13 @@
       }
 
       .mark {
-        display: grid;
-        place-items: center;
         width: 34px;
         height: 34px;
+        display: block;
         border-radius: 8px;
-        border: 1px solid rgba(212, 196, 166, 0.26);
-        background: rgba(212, 196, 166, 0.08);
+        border: 1px solid rgba(214, 111, 69, 0.28);
+        background: #171615;
+        padding: 3px;
       }
 
       h1 {
@@ -109,7 +110,7 @@
 
       .button.primary {
         background: var(--accent);
-        color: #17130f;
+        color: #fff;
       }
 
       .preview {
@@ -214,8 +215,8 @@
       <div class="hero">
         <div class="hero-inner">
           <div class="brand">
-            <span class="mark">↓</span>
-            <span>Streamline</span>
+            <img class="mark" src="../public/flameonlabs-icon.svg" alt="" />
+            <span>Streamline by FlameonLabs</span>
           </div>
           <h1>Streamline</h1>
           <p class="lede">

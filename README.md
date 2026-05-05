@@ -1,6 +1,8 @@
 # Streamline
 
-Open-source WebUI for `yt-dlp`: paste a URL, preview the media, choose formats, and download through a local Bun-powered server.
+Streamline is a FlameonLabs project: an open-source WebUI for `yt-dlp` where you paste a URL, preview the media, choose formats, and download through a local Bun-powered server.
+
+Built with the FlameonLabs carbon and ember brand system: warm technical surfaces, ember accents, and practical local-first tooling for builders.
 
 ## Status
 
