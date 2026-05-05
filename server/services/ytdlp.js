@@ -9,6 +9,7 @@ const YOUTUBE_AUTH_HINT =
 const SUBTITLE_RATE_LIMIT_HINT =
   "YouTube rate-limited the subtitle request. Turn off Options > Subtitles and retry the video, or wait a while and retry subtitles with fewer subtitle languages.";
 const METADATA_CACHE_TTL_MS = 15 * 60 * 1000;
+const METADATA_CACHE_MAX_ENTRIES = 250;
 const metadataCache = new Map();
 
 function getProbeArgs() {
@@ -133,11 +134,17 @@ function getCached(kind, url) {
 }
 
 function setCached(kind, url, value) {
-  if (metadataCache.size > 250) {
+  const cacheKey = getCacheKey(kind, url);
+  if (metadataCache.has(cacheKey)) {
+    metadataCache.delete(cacheKey);
+  }
+
+  while (metadataCache.size >= METADATA_CACHE_MAX_ENTRIES) {
     const oldestKey = metadataCache.keys().next().value;
     metadataCache.delete(oldestKey);
   }
-  metadataCache.set(getCacheKey(kind, url), {
+
+  metadataCache.set(cacheKey, {
     createdAt: Date.now(),
     value: structuredClone(value),
   });
@@ -204,22 +211,37 @@ function parseCustomFlags(input) {
 
   const blockedFlags = new Set([
     "--exec",
+    "--exec-before-download",
     "--config-location",
     "--plugin-dirs",
     "--cookies",
+    "--cookies-from-browser",
+    "--print-to-file",
+    "--write-pages",
+    "--load-pages",
+  ]);
+  const blockedFlagValueCount = new Map([
+    ["--exec", 1],
+    ["--exec-before-download", 1],
+    ["--config-location", 1],
+    ["--plugin-dirs", 1],
+    ["--cookies", 1],
+    ["--cookies-from-browser", 1],
+    ["--print-to-file", 2],
+    ["--load-pages", 1],
   ]);
   const filtered = [];
-  let skipNext = false;
+  let skippedValues = 0;
 
   for (const arg of args) {
-    if (skipNext) {
-      skipNext = false;
+    if (skippedValues > 0) {
+      skippedValues -= 1;
       continue;
     }
 
     const isBlockedEquals = [...blockedFlags].some((flag) => arg.startsWith(`${flag}=`));
     if (blockedFlags.has(arg) || isBlockedEquals) {
-      skipNext = blockedFlags.has(arg);
+      skippedValues = blockedFlags.has(arg) ? blockedFlagValueCount.get(arg) || 0 : 0;
       continue;
     }
 
@@ -829,3 +851,9 @@ function parseSize(str) {
   };
   return val * (multipliers[unit] || 1);
 }
+
+export const __ytdlpTest = {
+  metadataCache,
+  parseCustomFlags,
+  setCached,
+};

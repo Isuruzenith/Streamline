@@ -1,5 +1,47 @@
 import { downloadQueue } from "../services/queue.js";
-import { dirname } from "path";
+import { historyService } from "../services/history.js";
+import { homedir } from "os";
+import { dirname, isAbsolute, join, relative, resolve } from "path";
+
+const DEFAULT_DOWNLOAD_ROOT = join(homedir(), "Downloads", "Streamline");
+
+function isInsidePath(parent, child) {
+  const rel = relative(resolve(parent), resolve(child));
+  return rel === "" || (!!rel && !rel.startsWith("..") && !isAbsolute(rel));
+}
+
+function isKnownDownloadedFile(filepath) {
+  const resolvedFilepath = resolve(filepath);
+  if (downloadQueue.hasKnownFilepath(resolvedFilepath)) return true;
+  return historyService
+    .list()
+    .some((entry) => entry.filepath && resolve(entry.filepath) === resolvedFilepath);
+}
+
+function getOpenableFolder(filepath) {
+  if (!filepath) {
+    throw new Error("Missing 'filepath'");
+  }
+
+  const rawFilepath = String(filepath);
+  if (/^[A-Za-z][A-Za-z\d+.-]*:\/\//.test(rawFilepath) || !isAbsolute(rawFilepath)) {
+    throw new Error("Invalid filepath: must be an absolute local path");
+  }
+
+  const resolvedFilepath = resolve(rawFilepath);
+  const folder = dirname(resolvedFilepath);
+
+  if (!isInsidePath(DEFAULT_DOWNLOAD_ROOT, folder) && !isKnownDownloadedFile(resolvedFilepath)) {
+    throw new Error("Access denied: filepath is outside Streamline downloads");
+  }
+
+  return folder;
+}
+
+export const __downloadRouteTest = {
+  getOpenableFolder,
+  isInsidePath,
+};
 
 /**
  * Download API routes.
@@ -56,9 +98,10 @@ export function downloadRoutes(app) {
 
       return { success: true, ...result };
     } catch (err) {
+      const status = err.message?.startsWith("Duplicate downloadId") ? 409 : 500;
       return new Response(
         JSON.stringify({ error: err.message }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        { status, headers: { "Content-Type": "application/json" } }
       );
     }
   });
@@ -113,7 +156,7 @@ export function downloadRoutes(app) {
     }
 
     try {
-      const folder = dirname(filepath);
+      const folder = getOpenableFolder(filepath);
       const platform = process.platform;
       let cmd;
       let args;
@@ -136,9 +179,14 @@ export function downloadRoutes(app) {
 
       return { success: true };
     } catch (err) {
+      const status = err.message?.startsWith("Access denied")
+        ? 403
+        : err.message?.startsWith("Invalid filepath") || err.message?.startsWith("Missing")
+          ? 400
+          : 500;
       return new Response(
         JSON.stringify({ error: err.message }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        { status, headers: { "Content-Type": "application/json" } }
       );
     }
   });

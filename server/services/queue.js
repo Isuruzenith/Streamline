@@ -1,5 +1,5 @@
 import { homedir } from "os";
-import { join } from "path";
+import { join, resolve } from "path";
 import { startDownload } from "./ytdlp.js";
 import { historyService } from "./history.js";
 import {
@@ -13,7 +13,7 @@ import {
  * Sequential download queue.
  * Processes one download at a time, notifies via callbacks.
  */
-class DownloadQueue {
+export class DownloadQueue {
   constructor() {
     this.queue = []; // pending jobs
     this.active = null; // currently downloading
@@ -47,6 +47,20 @@ class DownloadQueue {
     if (this.completed.length > 100) this.completed.shift();
   }
 
+  hasDownloadId(downloadId) {
+    return (
+      this.active?.downloadId === downloadId ||
+      this.queue.some((job) => job.downloadId === downloadId) ||
+      this.pausedJobs.has(downloadId) ||
+      this.completed.some((job) => job.downloadId === downloadId)
+    );
+  }
+
+  hasKnownFilepath(filepath) {
+    const resolvedFilepath = resolve(filepath);
+    return this.completed.some((job) => job.filepath && resolve(job.filepath) === resolvedFilepath);
+  }
+
   /**
    * Add a download job to the queue.
    */
@@ -62,6 +76,10 @@ class DownloadQueue {
     filenameTemplate,
     options,
   }) {
+    if (this.hasDownloadId(downloadId)) {
+      throw new Error(`Duplicate downloadId: ${downloadId}`);
+    }
+
     const job = {
       downloadId,
       url,
