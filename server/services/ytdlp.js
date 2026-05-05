@@ -38,6 +38,22 @@ function normalizeYtdlpError(message) {
   return text;
 }
 
+function getYtdlpErrorMessage(stderrText, exitCode) {
+  const lines = String(stderrText || "")
+    .split("\n")
+    .map((line) => stripAnsi(line).trim())
+    .filter(Boolean);
+  const errorLines = lines.filter((line) => /\bERROR\b/i.test(line));
+  const ffmpegDetailLines = lines.filter((line) =>
+    /Could not write header|Could not find tag|not currently supported|Invalid argument|Conversion failed|Error while|does not support codec|Only VP8|Only VP9|codec .* is not supported/i.test(line)
+  );
+  const message = [...errorLines, ...ffmpegDetailLines]
+    .filter((line, index, all) => all.indexOf(line) === index)
+    .join("; ");
+
+  return normalizeYtdlpError(message || stderrText || `Download failed with exit code ${exitCode}`);
+}
+
 function ensureDirectory(path) {
   if (!path) return;
 
@@ -253,6 +269,60 @@ function parseCustomFlags(input) {
 
 function stripAnsi(input) {
   return String(input || "").replace(/\x1b\[[0-9;]*m/g, "");
+}
+
+function argsContainFlag(args, flags) {
+  return args.some((arg) =>
+    flags.some((flag) => arg === flag || arg.startsWith(`${flag}=`))
+  );
+}
+
+function getFormatSelectionArgs({ preset, videoFormat }) {
+  const wantsMp4 = videoFormat === "mp4";
+
+  switch (preset) {
+    case "best-mp4":
+      return [
+        "--format",
+        "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
+        "--merge-output-format",
+        "mp4",
+      ];
+    case "best":
+      return wantsMp4
+        ? [
+            "--format",
+            "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
+            "--merge-output-format",
+            "mp4",
+          ]
+        : ["-f", "bestvideo+bestaudio/best"];
+    case "1080p":
+      return wantsMp4
+        ? [
+            "-f",
+            "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]",
+          ]
+        : ["-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best"];
+    case "720p":
+      return wantsMp4
+        ? [
+            "-f",
+            "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]",
+          ]
+        : ["-f", "bestvideo[height<=720]+bestaudio/best[height<=720]/best"];
+    case "audio":
+      return [];
+    default:
+      return wantsMp4
+        ? [
+            "--format",
+            "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
+            "--merge-output-format",
+            "mp4",
+          ]
+        : ["-f", "bestvideo+bestaudio/best"];
+  }
 }
 
 /**
@@ -491,9 +561,15 @@ export function startDownload({
   const ytdlpBin = requireYtdlpBin();
   const ffmpegLocation = resolveFFmpegLocation();
   const customArgsParsed = parseCustomFlags(options.customFlags);
+  const videoFormat = String(options.videoFormat || "").trim().toLowerCase();
   const customOverridesFormat = customArgsParsed.some(
     (arg) => arg === "-f" || arg === "--format" || arg.startsWith("--format=")
   );
+  const customSetsOutputFormat = argsContainFlag(customArgsParsed, [
+    "--merge-output-format",
+    "--recode-video",
+    "--remux-video",
+  ]);
 
   const args = [
     ytdlpBin,
@@ -526,47 +602,29 @@ export function startDownload({
       args.push("-f", formatId);
     }
   } else if (!customOverridesFormat && preset) {
-    switch (preset) {
-      case "best-mp4":
-        args.push(
-          "--format",
-          "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best",
-          "--merge-output-format",
-          "mp4"
-        );
-        break;
-      case "best":
-        // bestvideo+bestaudio, merge → fallback to single best
-        args.push("-f", "bestvideo+bestaudio/best");
-        break;
-      case "1080p":
-        // best video ≤1080p + best audio → fallback to single stream ≤1080p → best
-        args.push("-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best");
-        break;
-      case "720p":
-        args.push("-f", "bestvideo[height<=720]+bestaudio/best[height<=720]/best");
-        break;
-      case "audio":
-        args.push(
-          "-x",
-          "--audio-format",
-          options.audioFormat || "mp3",
-          "--audio-quality",
-          String(options.audioQuality || "0")
-        );
-        break;
-      default:
-        args.push("-f", "bestvideo+bestaudio/best");
+    if (preset === "audio") {
+      args.push(
+        "-x",
+        "--audio-format",
+        options.audioFormat || "mp3",
+        "--audio-quality",
+        String(options.audioQuality || "0")
+      );
+    } else {
+      args.push(...getFormatSelectionArgs({ preset, videoFormat }));
     }
   }
 
-  const videoFormat = String(options.videoFormat || "").trim().toLowerCase();
   const validVideoFormats = new Set(["mp4", "mkv", "webm", "mov", "avi"]);
   const alreadySetsOutputFormat =
-    args.includes("--merge-output-format") || args.includes("--recode-video");
+    args.includes("--merge-output-format") ||
+    args.includes("--recode-video") ||
+    args.includes("--remux-video") ||
+    customSetsOutputFormat;
   if (
     preset !== "audio" &&
     formatType !== "audio" &&
+    !formatId &&
     validVideoFormats.has(videoFormat) &&
     !alreadySetsOutputFormat
   ) {
@@ -814,12 +872,8 @@ export function startDownload({
       onComplete?.({ filepath });
     } else {
       const stderrText = stderrLines.join("\n");
-      const errorLines = stderrText
-        .split("\n")
-        .filter((l) => l.includes("ERROR"))
-        .join("; ");
       onError?.({
-        error: normalizeYtdlpError(errorLines || stderrText || "Download failed with exit code " + exitCode),
+        error: getYtdlpErrorMessage(stderrText, exitCode),
         stderr: stderrText,
       });
     }
@@ -854,6 +908,8 @@ function parseSize(str) {
 
 export const __ytdlpTest = {
   metadataCache,
+  getFormatSelectionArgs,
+  getYtdlpErrorMessage,
   parseCustomFlags,
   setCached,
 };

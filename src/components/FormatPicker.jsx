@@ -4,7 +4,7 @@ import useStore from "@/hooks/useStore";
 import { cn, formatBytes } from "@/lib/utils";
 
 const PRESETS = [
-  { id: "best", label: "Best quality", icon: Film, desc: "Highest available video + audio" },
+  { id: "best-mp4", label: "Best MP4", icon: Film, desc: "Best MP4 video + M4A audio" },
   { id: "1080p", label: "1080p", icon: Film, desc: "Full HD video" },
   { id: "720p", label: "720p", icon: Film, desc: "HD video, smaller file" },
   { id: "audio", label: "Audio only", icon: Music, desc: "Best audio, no video (MP3)" },

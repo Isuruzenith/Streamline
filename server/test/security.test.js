@@ -41,6 +41,29 @@ describe("yt-dlp custom flag filtering", () => {
   });
 });
 
+describe("yt-dlp format selection", () => {
+  it("keeps default MP4 downloads on MP4-compatible streams", () => {
+    expect(__ytdlpTest.getFormatSelectionArgs({
+      preset: "best",
+      videoFormat: "mp4",
+    })).toContain("bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]");
+  });
+
+  it("preserves the useful ffmpeg error detail from post-processing output", () => {
+    const message = __ytdlpTest.getYtdlpErrorMessage(
+      [
+        "ERROR: Postprocessing:   Stream #1:0 -> #0:1 (copy)",
+        "[mp4 @ 000001] Could not find tag for codec opus in stream #1, codec not currently supported in container",
+        "Conversion failed!",
+      ].join("\n"),
+      1
+    );
+
+    expect(message).toContain("codec opus");
+    expect(message).toContain("not currently supported");
+  });
+});
+
 describe("metadata cache eviction", () => {
   it("caps the metadata cache at 250 entries", () => {
     __ytdlpTest.metadataCache.clear();

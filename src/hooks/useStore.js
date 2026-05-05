@@ -158,7 +158,7 @@ const useStore = create((set, get) => ({
   setMediaUrl: (url) => set({ mediaUrl: url }),
 
   fetchMediaInfo: async (url) => {
-    set({ mediaLoading: true, mediaError: null, mediaInfo: null, selectedFormatId: null, selectedPreset: "best" });
+    set({ mediaLoading: true, mediaError: null, mediaInfo: null, selectedFormatId: null, selectedPreset: "best-mp4" });
     try {
       const res = await fetch(`/api/formats?url=${encodeURIComponent(url)}`);
       if (!res.ok) {
@@ -184,11 +184,11 @@ const useStore = create((set, get) => ({
   },
 
   clearMedia: () =>
-    set({ mediaUrl: "", mediaInfo: null, mediaLoading: false, mediaError: null, selectedFormatId: null, selectedPreset: "best" }),
+    set({ mediaUrl: "", mediaInfo: null, mediaLoading: false, mediaError: null, selectedFormatId: null, selectedPreset: "best-mp4" }),
 
   // ─── Selected Format ──────────────────────────────────────
-  selectedFormatId: null, // will default to "best" or a specific format_id
-  selectedPreset: "best", // "best" | "1080p" | "720p" | "audio"
+  selectedFormatId: null, // defaults to the MP4 preset unless a specific format is selected
+  selectedPreset: "best-mp4", // "best-mp4" | "best" | "1080p" | "720p" | "audio"
 
   setSelectedFormatId: (id) => set({ selectedFormatId: id, selectedPreset: null }),
   setSelectedPreset: (preset) => set({ selectedPreset: preset, selectedFormatId: null }),
@@ -260,7 +260,7 @@ const useStore = create((set, get) => ({
           url,
           formatId: overrideUrl ? null : selectedFormatId,
           formatType: overrideUrl ? null : formatType,
-          preset: overrideUrl ? (downloadConfig.preset || "best") : (selectedPreset || "best"),
+          preset: overrideUrl ? (downloadConfig.preset || "best-mp4") : (selectedPreset || "best-mp4"),
           downloadId: id,
           title,
           thumbnail,
@@ -437,7 +437,7 @@ const useStore = create((set, get) => ({
       const entry = mediaInfo.entries[idx];
       if (entry?.url) {
         await startDownload(entry.url, entry.title, entry.thumbnail, {
-          preset: selectedPreset || "best",
+          preset: selectedPreset || "best-mp4",
         });
       }
     }

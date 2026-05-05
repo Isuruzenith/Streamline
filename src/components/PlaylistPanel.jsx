@@ -4,7 +4,7 @@ import useStore from "@/hooks/useStore";
 import { cn, formatDuration } from "@/lib/utils";
 
 const QUALITY_PRESETS = [
-  { id: "best", label: "Best", icon: Film },
+  { id: "best-mp4", label: "Best MP4", icon: Film },
   { id: "1080p", label: "1080p", icon: Film },
   { id: "720p", label: "720p", icon: Film },
   { id: "audio", label: "Audio", icon: Music },
@@ -104,7 +104,7 @@ export default function PlaylistPanel() {
         <div className="ml-auto inline-flex rounded-md border border-border overflow-hidden bg-surface">
           {QUALITY_PRESETS.map((preset) => {
             const Icon = preset.icon;
-            const isSelected = (selectedPreset || "best") === preset.id;
+            const isSelected = (selectedPreset || "best-mp4") === preset.id;
             return (
               <button
                 key={preset.id}
@@ -224,7 +224,7 @@ export default function PlaylistPanel() {
             className="sl-btn sl-btn-primary w-full py-3"
           >
             <Download size={16} />
-            Download {selectedCount} item{selectedCount !== 1 ? "s" : ""} - {QUALITY_PRESETS.find((preset) => preset.id === (selectedPreset || "best"))?.label}
+            Download {selectedCount} item{selectedCount !== 1 ? "s" : ""} - {QUALITY_PRESETS.find((preset) => preset.id === (selectedPreset || "best-mp4"))?.label}
           </button>
         </div>
       )}
