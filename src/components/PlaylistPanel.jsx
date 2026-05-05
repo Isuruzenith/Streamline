@@ -104,7 +104,7 @@ export default function PlaylistPanel() {
         <div className="ml-auto inline-flex rounded-md border border-border overflow-hidden bg-surface">
           {QUALITY_PRESETS.map((preset) => {
             const Icon = preset.icon;
-            const isSelected = (selectedPreset || "best-mp4") === preset.id;
+            const isSelected = selectedPreset === preset.id;
             return (
               <button
                 key={preset.id}
@@ -221,10 +221,16 @@ export default function PlaylistPanel() {
         <div className="mt-4">
           <button
             onClick={downloadSelectedPlaylistItems}
-            className="sl-btn sl-btn-primary w-full py-3"
+            disabled={!selectedPreset}
+            className={cn(
+              "sl-btn w-full py-3",
+              selectedPreset ? "sl-btn-primary" : "bg-surface-hover text-text-dim cursor-not-allowed"
+            )}
           >
             <Download size={16} />
-            Download {selectedCount} item{selectedCount !== 1 ? "s" : ""} - {QUALITY_PRESETS.find((preset) => preset.id === (selectedPreset || "best-mp4"))?.label}
+            {selectedPreset
+              ? `Download ${selectedCount} item${selectedCount !== 1 ? "s" : ""} - ${QUALITY_PRESETS.find((preset) => preset.id === selectedPreset)?.label}`
+              : "Choose Quality"}
           </button>
         </div>
       )}
