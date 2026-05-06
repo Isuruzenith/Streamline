@@ -41,12 +41,11 @@ function log(icon, msg) {
 function getPBSUrl() {
   const platform = process.platform;
   const arch = process.arch;
-  const version = "3.11.9";
+  const version = "3.11.10";
   const tag = "20241016";
 
   const matrix = {
     "win32-x64": `cpython-${version}+${tag}-x86_64-pc-windows-msvc-install_only.tar.gz`,
-    "win32-arm64": `cpython-${version}+${tag}-aarch64-pc-windows-msvc-install_only.tar.gz`,
     "darwin-x64": `cpython-${version}+${tag}-x86_64-apple-darwin-install_only.tar.gz`,
     "darwin-arm64": `cpython-${version}+${tag}-aarch64-apple-darwin-install_only.tar.gz`,
     "linux-x64": `cpython-${version}+${tag}-x86_64-unknown-linux-gnu-install_only.tar.gz`,
@@ -95,6 +94,20 @@ function getVenvPipBin() {
 
 function getToolBinaryName(name) {
   return process.platform === "win32" ? `${name}.exe` : name;
+}
+
+function getSystemPythonCommands() {
+  if (process.platform === "win32") {
+    return [
+      { cmd: "python", args: [] },
+      { cmd: "py", args: ["-3"] },
+    ];
+  }
+
+  return [
+    { cmd: "python3", args: [] },
+    { cmd: "python", args: [] },
+  ];
 }
 
 function copyExecutable(source, destination) {
@@ -167,6 +180,20 @@ async function run(cmd, args, opts = {}) {
   }
 }
 
+async function runFirstSuccessful(commands, args) {
+  let lastError = null;
+  for (const command of commands) {
+    try {
+      await run(command.cmd, [...command.args, ...args]);
+      return;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error("No usable Python executable found");
+}
+
 /**
  * Run a command and capture output.
  */
@@ -192,13 +219,15 @@ async function main() {
   const pythonBin = getPythonBin();
 
   if (existsSync(pythonBin)) {
-    log(green("✓"), `Python already installed at ${dim(pythonBin)}`);
+    log(green("OK"), `Python already installed at ${dim(pythonBin)}`);
   } else {
-    log(dim("▸"), "Downloading Python 3.11.9 (python-build-standalone)...");
-    const url = getPBSUrl();
-    log(dim("  →"), dim(url));
+    log(dim(">"), "Downloading Python 3.11.10 (python-build-standalone)...");
+
+
 
     try {
+      const url = getPBSUrl();
+      log(dim("  ->"), dim(url));
       mkdirSync(PYTHON_DIR, { recursive: true });
 
       // Download
@@ -223,7 +252,7 @@ async function main() {
       } catch { }
 
       if (existsSync(pythonBin)) {
-        log(green("✓"), `Python 3.11.9 installed at ${dim(PYTHON_DIR)}`);
+        log(green("OK"), `Python 3.11.10 installed at ${dim(PYTHON_DIR)}`);
       } else {
         throw new Error("Python binary not found after extraction");
       }
@@ -242,8 +271,11 @@ async function main() {
   } else {
     log(dim("▸"), "Creating isolated venv...");
     try {
-      const pythonToUse = existsSync(pythonBin) ? pythonBin : "python3";
-      await run(pythonToUse, ["-m", "venv", VENV_DIR]);
+      if (existsSync(pythonBin)) {
+        await run(pythonBin, ["-m", "venv", VENV_DIR]);
+      } else {
+        await runFirstSuccessful(getSystemPythonCommands(), ["-m", "venv", VENV_DIR]);
+      }
       log(green("✓"), `Venv created at ${dim(VENV_DIR)}`);
     } catch (err) {
       log(red("✗"), `Failed to create venv: ${err.message}`);
@@ -258,7 +290,11 @@ async function main() {
     try {
       await run(pipBin, ["install", "--upgrade", "yt-dlp[default,curl-cffi]"]);
       const version = await runCapture(
-        join(VENV_DIR, process.platform === "win32" ? "Scripts" : "bin", "yt-dlp"),
+        join(
+          VENV_DIR,
+          process.platform === "win32" ? "Scripts" : "bin",
+          process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp"
+        ),
         ["--version"]
       );
       log(green("✓"), `yt-dlp ${version} installed`);
