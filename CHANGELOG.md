@@ -3,6 +3,14 @@
 All notable changes to Streamline are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.0](https://github.com/Isuruzenith/Streamline/compare/v1.1.0...v1.2.0) (2026-05-06)
+
+
+### Features
+
+* add support for checking yt-dlp options in help text and update tests ([4a04d16](https://github.com/Isuruzenith/Streamline/commit/4a04d16993feda706a32f32d1003a5172bcef8c2))
+* add support for checking yt-dlp options in help text and update… ([46e8867](https://github.com/Isuruzenith/Streamline/commit/46e8867e2e19db3a82c252070fc56260b569645f))
+
 ## [1.1.0](https://github.com/Isuruzenith/Streamline/compare/v1.0.0...v1.1.0) (2026-05-06)
 
 
