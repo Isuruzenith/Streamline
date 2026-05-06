@@ -11,6 +11,9 @@ import { homedir } from "os";
 
 const ENV_FILE = join(homedir(), ".streamline", "env.json");
 const PORT = parseInt(process.env.PORT || "7979", 10);
+const PACKAGE_ROOT = join(import.meta.dir, "..");
+const PACKAGE_JSON = join(PACKAGE_ROOT, "package.json");
+const PROVISION_SCRIPT = join(PACKAGE_ROOT, "scripts", "provision.js");
 
 // ANSI
 const green = (s) => `\x1b[32m${s}\x1b[0m`;
@@ -19,9 +22,33 @@ const dim = (s) => `\x1b[2m${s}\x1b[0m`;
 const cyan = (s) => `\x1b[36m${s}\x1b[0m`;
 const bold = (s) => `\x1b[1m${s}\x1b[0m`;
 
+function getPackageVersion() {
+  try {
+    return JSON.parse(readFileSync(PACKAGE_JSON, "utf-8")).version || "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+function printHelp() {
+  console.log(`Streamline ${getPackageVersion()}
+
+Usage:
+  streamline-md [options]
+
+Options:
+  -h, --help       Show this help message
+  -v, --version    Show the installed version
+
+Environment:
+  PORT             Server port to use (default: 7979)
+`);
+}
+
 async function runProvision() {
   console.log(`  ${cyan("->")} Provisioning yt-dlp and ffmpeg...`);
-  const provision = Bun.spawn([process.execPath, "scripts/provision.js"], {
+  const provision = Bun.spawn([process.execPath, PROVISION_SCRIPT], {
+    cwd: PACKAGE_ROOT,
     stdout: "inherit",
     stderr: "inherit",
   });
@@ -32,6 +59,16 @@ async function runProvision() {
 }
 
 async function main() {
+  const args = process.argv.slice(2);
+  if (args.includes("--version") || args.includes("-v")) {
+    console.log(getPackageVersion());
+    return;
+  }
+  if (args.includes("--help") || args.includes("-h")) {
+    printHelp();
+    return;
+  }
+
   console.log("");
   console.log(`  ${cyan("*")} ${bold("Streamline")}`);
   console.log("");

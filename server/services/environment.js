@@ -59,7 +59,7 @@ export function resolvePythonBin() {
     return manifest.pythonPath;
   }
 
-  return "python3";
+  return process.platform === "win32" ? "python" : "python3";
 }
 
 /**
