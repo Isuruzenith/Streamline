@@ -3,6 +3,22 @@
 All notable changes to Streamline are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.0](https://github.com/Isuruzenith/Streamline/compare/v1.0.0...v1.1.0) (2026-05-06)
+
+
+### Features
+
+* add package metadata reading and npm version check before publi… ([2abaa64](https://github.com/Isuruzenith/Streamline/commit/2abaa64d546f7be09e78c2edb96b1dda0a240e2c))
+* add package metadata reading and npm version check before publishing ([b92c34e](https://github.com/Isuruzenith/Streamline/commit/b92c34ec5f7b7d4d2fb076cb3200704e718a2a6e))
+* update release workflow to trigger on published releases and ad… ([9efce2e](https://github.com/Isuruzenith/Streamline/commit/9efce2e8f341b5383f79cbbaec3f7b2d22498a09))
+* update release workflow to trigger on published releases and adjust package name in config ([0a8a723](https://github.com/Isuruzenith/Streamline/commit/0a8a72363fb87d8ad68fde2cbc2fe13636de48dd))
+
+
+### Bug Fixes
+
+* update bootstrap SHA in release configuration ([063a9df](https://github.com/Isuruzenith/Streamline/commit/063a9df2057417224b6197c614fd578c0f59297b))
+* update bootstrap SHA in release configuration ([6bc828e](https://github.com/Isuruzenith/Streamline/commit/6bc828e2623230181f6b16ce20f826d674d2912c))
+
 ## [1.0.0] - 2026-05-05
 
 ### Added
