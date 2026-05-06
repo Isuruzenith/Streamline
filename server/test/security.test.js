@@ -62,6 +62,11 @@ describe("yt-dlp format selection", () => {
     expect(message).toContain("codec opus");
     expect(message).toContain("not currently supported");
   });
+
+  it("detects whether the installed yt-dlp help supports js runtime flags", () => {
+    expect(__ytdlpTest.hasYtdlpOptionInHelp("  --js-runtimes RUNTIMES", "--js-runtimes")).toBe(true);
+    expect(__ytdlpTest.hasYtdlpOptionInHelp("  --extractor-args ARGS", "--js-runtimes")).toBe(false);
+  });
 });
 
 describe("metadata cache eviction", () => {
