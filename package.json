@@ -15,14 +15,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/flameonlabs/streamline.git"
+    "url": "git+https://github.com/flameonlabs/streamline.git"
   },
   "homepage": "https://github.com/flameonlabs/streamline#readme",
   "bugs": {
     "url": "https://github.com/flameonlabs/streamline/issues"
   },
   "bin": {
-    "streamline-md": "./bin/streamline.js"
+    "streamline-md": "bin/streamline.js"
   },
   "scripts": {
     "dev": "concurrently -n fe,be -c cyan,green \"bun run dev:frontend\" \"bun run dev:backend\"",
