@@ -1,5 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "e3f90b34c8b12cb8e3cbaf574ba49a2f2e601dbe",
   "release-type": "node",
   "package-name": "streamline-md",
   "changelog-sections": [
