@@ -11,6 +11,7 @@ const SUBTITLE_RATE_LIMIT_HINT =
 const METADATA_CACHE_TTL_MS = 15 * 60 * 1000;
 const METADATA_CACHE_MAX_ENTRIES = 250;
 const metadataCache = new Map();
+const ytdlpHelpSupportCache = new Map();
 
 function getProbeArgs() {
   return [
@@ -22,9 +23,37 @@ function getProbeArgs() {
   ];
 }
 
+function hasYtdlpOptionInHelp(helpText, option) {
+  return String(helpText || "").includes(option);
+}
+
+function supportsYtdlpOption(option, ytdlpBin = resolveYtdlpBin()) {
+  if (!option || !ytdlpBin) return false;
+
+  const cacheKey = `${ytdlpBin}:${option}`;
+  if (ytdlpHelpSupportCache.has(cacheKey)) {
+    return ytdlpHelpSupportCache.get(cacheKey);
+  }
+
+  let supported = false;
+  try {
+    const proc = Bun.spawnSync([ytdlpBin, "--help"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const helpText = new TextDecoder().decode(proc.stdout || new Uint8Array());
+    supported = hasYtdlpOptionInHelp(helpText, option);
+  } catch {
+    supported = false;
+  }
+
+  ytdlpHelpSupportCache.set(cacheKey, supported);
+  return supported;
+}
+
 function getJsRuntimeArgs() {
   const bunBin = resolveBunBin();
-  return bunBin ? ["--js-runtimes", `bun:${bunBin}`] : [];
+  return bunBin && supportsYtdlpOption("--js-runtimes") ? ["--js-runtimes", `bun:${bunBin}`] : [];
 }
 
 function normalizeYtdlpError(message) {
@@ -909,6 +938,8 @@ function parseSize(str) {
 export const __ytdlpTest = {
   metadataCache,
   getFormatSelectionArgs,
+  hasYtdlpOptionInHelp,
+  supportsYtdlpOption,
   getYtdlpErrorMessage,
   parseCustomFlags,
   setCached,
