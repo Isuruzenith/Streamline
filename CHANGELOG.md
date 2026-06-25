@@ -3,6 +3,18 @@
 All notable changes to Streamline are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.0](https://github.com/Isuruzenith/Streamline/compare/v1.2.0...v1.3.0) (2026-06-25)
+
+
+### Features
+
+* add format selection UI, layout components, and sidebar navigation navigation ([71ef830](https://github.com/Isuruzenith/Streamline/commit/71ef830b3da0b8c804815a824ae7f8e0c43ce6a6))
+* implement core backend download queue service with concurrency support and frontend integration architecture ([bf36364](https://github.com/Isuruzenith/Streamline/commit/bf363648b5f38b17861439df9ab0268b9f111e7a))
+* implement environment management API and yt-dlp service integration ([67abcf6](https://github.com/Isuruzenith/Streamline/commit/67abcf6afd9cf270f29e055823780e6193500bcd))
+* implement UI shell including layout, navigation, and collapsible live log viewer ([1f8d60f](https://github.com/Isuruzenith/Streamline/commit/1f8d60f740d8546e45f2b5bdad71e8db76977eb4))
+* implement yt-dlp service with utility functions for download management, metadata caching, and playlist detection ([586334a](https://github.com/Isuruzenith/Streamline/commit/586334a163a0a0bac91a47a130c9fa6e906a58d9))
+* initialize project UI components, layout, and global styling with Tailwind CSS ([93e1c9b](https://github.com/Isuruzenith/Streamline/commit/93e1c9b2cfdfd198c6a2d48ba481a2391d65284b))
+
 ## [1.2.0](https://github.com/Isuruzenith/Streamline/compare/v1.1.0...v1.2.0) (2026-05-06)
 
 
