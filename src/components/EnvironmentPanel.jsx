@@ -124,7 +124,7 @@ export default function EnvironmentPanel() {
       <div className="sl-card sl-card-accent mb-5">
         <p className="text-sm+ text-text-muted leading-relaxed">
           Because{" "}
-          <code className="sl-code">bun install -g streamline</code> handles all
+          <code className="sl-code">bun install -g streamline-md</code> handles all
           provisioning automatically, there is{" "}
           <strong className="text-accent font-semibold">no setup wizard</strong>.
           This panel shows the health of each dependency.
