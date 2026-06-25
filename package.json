@@ -1,6 +1,6 @@
 {
   "name": "streamline-md",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Streamline - an open-source WebUI for yt-dlp.",
   "author": "FlameonLabs",
   "type": "module",
