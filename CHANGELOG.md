@@ -3,6 +3,14 @@
 All notable changes to Streamline are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.4.0](https://github.com/Isuruzenith/Streamline/compare/v1.3.1...v1.4.0) (2026-06-25)
+
+
+### Features
+
+* add automated provisioning script and update installation docum… ([9ad39d7](https://github.com/Isuruzenith/Streamline/commit/9ad39d7a5f05a97b2f071aa6c10585e8821c5463))
+* add automated provisioning script and update installation documentation ([000302d](https://github.com/Isuruzenith/Streamline/commit/000302d09b1876af591f289ce914031bfe9ebd5e))
+
 ## [1.3.1](https://github.com/Isuruzenith/Streamline/compare/v1.3.0...v1.3.1) (2026-06-25)
 
 
