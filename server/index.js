@@ -54,8 +54,12 @@ if (!IS_DEV && existsSync(DIST_DIR)) {
     const url = new URL(request.url);
     let filePath = join(DIST_DIR, url.pathname === "/" ? "index.html" : url.pathname);
 
-    // If the file doesn't exist, serve index.html (SPA fallback)
+    // If the file doesn't exist, check if it's a static file request (has extension or is in assets/)
     if (!existsSync(filePath)) {
+      const hasExtension = /\.[a-zA-Z0-9]{2,4}$/.test(url.pathname);
+      if (hasExtension || url.pathname.startsWith("/assets/")) {
+        return new Response("Not Found", { status: 404 });
+      }
       filePath = join(DIST_DIR, "index.html");
     }
 
