@@ -58,8 +58,6 @@
   "dependencies": {
     "@elysiajs/cors": "^1.2.0",
     "@elysiajs/static": "^1.2.0",
-    "@ffmpeg-installer/ffmpeg": "^1.1.0",
-    "@ffprobe-installer/ffprobe": "^2.1.2",
     "clsx": "^2.1.0",
     "elysia": "^1.2.0",
     "lucide-react": "^0.468.0",

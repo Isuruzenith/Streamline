@@ -7,23 +7,21 @@
  * 1. python-build-standalone (Python 3.11)
  * 2. Creates isolated venv
  * 3. Installs yt-dlp
- * 4. Installs ffmpeg and ffprobe
+ * 4. Downloads ffmpeg and ffprobe from GitHub releases
  * 5. Writes ~/.streamline/env.json
  *
  * This script is idempotent — safe to re-run.
  */
 
 import { homedir } from "os";
-import { join } from "path";
-import { createRequire } from "module";
-import { chmodSync, copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
+import { join, basename } from "path";
+import { chmodSync, existsSync, mkdirSync, readdirSync, writeFileSync } from "fs";
 
 const STREAMLINE_DIR = join(homedir(), ".streamline");
 const PYTHON_DIR = join(STREAMLINE_DIR, "python");
 const VENV_DIR = join(STREAMLINE_DIR, "venv");
 const FFMPEG_DIR = join(STREAMLINE_DIR, "ffmpeg");
 const ENV_FILE = join(STREAMLINE_DIR, "env.json");
-const require = createRequire(import.meta.url);
 
 // ANSI colors
 const green = (s) => `\x1b[32m${s}\x1b[0m`;
@@ -110,59 +108,187 @@ function getSystemPythonCommands() {
   ];
 }
 
-function copyExecutable(source, destination) {
-  copyFileSync(source, destination);
+/**
+ * Get ffmpeg/ffprobe download URLs for the current platform.
+ *
+ * Sources:
+ * - Windows/Linux: BtbN/FFmpeg-Builds (GitHub, GPL builds with all codecs)
+ * - macOS: ffmpeg.martin-riedl.de (signed + notarized, native arm64 + amd64)
+ *
+ * Martin Riedl's scripting redirect API provides stable URLs:
+ *   https://ffmpeg.martin-riedl.de/redirect/latest/{macos,linux}/{amd64,arm64}/{release}/{ffmpeg.zip,...}
+ */
+function getFfmpegDownloadInfo() {
+  const platform = process.platform;
+  const arch = process.arch;
+
+  // BtbN/FFmpeg-Builds release tag — GPL build with all codecs
+  const tag = "latest";
+  const btbnBase = `https://github.com/BtbN/FFmpeg-Builds/releases/download/${tag}`;
+
+  const matrix = {
+    "win32-x64": {
+      url: `${btbnBase}/ffmpeg-master-latest-win64-gpl.zip`,
+      archiveType: "zip",
+    },
+    "linux-x64": {
+      url: `${btbnBase}/ffmpeg-master-latest-linux64-gpl.tar.xz`,
+      archiveType: "tar.xz",
+    },
+    "linux-arm64": {
+      url: `${btbnBase}/ffmpeg-master-latest-linuxarm64-gpl.tar.xz`,
+      archiveType: "tar.xz",
+    },
+  };
+
+  // macOS: use Martin Riedl's stable redirect API (signed + notarized, native arm64)
+  if (platform === "darwin") {
+    const macArch = arch === "arm64" ? "arm64" : "amd64";
+    const riedlBase = `https://ffmpeg.martin-riedl.de/redirect/latest/macos/${macArch}/release`;
+    return {
+      platform: `darwin-${arch}`,
+      ffmpegUrl: `${riedlBase}/ffmpeg.zip`,
+      ffprobeUrl: `${riedlBase}/ffprobe.zip`,
+      archiveType: "zip-separate",
+    };
+  }
+
+  const key = `${platform}-${arch}`;
+  const info = matrix[key];
+
+  if (!info) {
+    throw new Error(
+      `Unsupported platform for ffmpeg download: ${key}. Supported: ${Object.keys(matrix).join(", ")}, darwin-x64, darwin-arm64`
+    );
+  }
+
+  return { platform: key, ...info };
+}
+
+/**
+ * Download and extract ffmpeg + ffprobe binaries to FFMPEG_DIR.
+ */
+async function downloadFfmpegTools() {
+  mkdirSync(FFMPEG_DIR, { recursive: true });
+
+  const info = getFfmpegDownloadInfo();
+  const ffmpegDest = join(FFMPEG_DIR, getToolBinaryName("ffmpeg"));
+  const ffprobeDest = join(FFMPEG_DIR, getToolBinaryName("ffprobe"));
+
+  // macOS: download ffmpeg and ffprobe as separate zip files
+  if (info.platform === "darwin") {
+    for (const [name, url, dest] of [
+      ["ffmpeg", info.ffmpegUrl, ffmpegDest],
+      ["ffprobe", info.ffprobeUrl, ffprobeDest],
+    ]) {
+      log(dim("  ->"), `Downloading ${name}...`);
+      const resp = await fetch(url, { redirect: "follow" });
+      if (!resp.ok) throw new Error(`Failed to download ${name}: HTTP ${resp.status}`);
+
+      const zipPath = join(STREAMLINE_DIR, `${name}.zip`);
+      const buf = await resp.arrayBuffer();
+      writeFileSync(zipPath, Buffer.from(buf));
+
+      // Extract — macOS zip contains just the binary at root level
+      const tmpDir = join(STREAMLINE_DIR, `${name}_tmp`);
+      mkdirSync(tmpDir, { recursive: true });
+      await run("unzip", ["-o", zipPath, "-d", tmpDir]);
+
+      const extractedBin = join(tmpDir, name);
+      if (existsSync(extractedBin)) {
+        const { copyFileSync, rmSync } = await import("fs");
+        copyFileSync(extractedBin, dest);
+        chmodSync(dest, 0o755);
+        rmSync(tmpDir, { recursive: true, force: true });
+      }
+
+      // Cleanup zip
+      try {
+        const { unlinkSync } = await import("fs");
+        unlinkSync(zipPath);
+      } catch {}
+    }
+
+    return { ffmpegPath: ffmpegDest, ffprobePath: ffprobeDest, ffmpegLocation: FFMPEG_DIR };
+  }
+
+  // Windows / Linux: download single archive containing both binaries
+  log(dim("  ->"), dim(info.url));
+
+  const resp = await fetch(info.url, { redirect: "follow" });
+  if (!resp.ok) throw new Error(`Failed to download ffmpeg: HTTP ${resp.status}`);
+
+  const archiveName = info.archiveType === "zip" ? "ffmpeg-archive.zip" : "ffmpeg-archive.tar.xz";
+  const archivePath = join(STREAMLINE_DIR, archiveName);
+  const buf = await resp.arrayBuffer();
+  writeFileSync(archivePath, Buffer.from(buf));
+  log(dim("  →"), `Downloaded ${(buf.byteLength / 1024 / 1024).toFixed(1)}MB`);
+
+  // Extract to temp dir
+  const extractDir = join(STREAMLINE_DIR, "ffmpeg_extract");
+  mkdirSync(extractDir, { recursive: true });
+
+  if (info.archiveType === "zip") {
+    // Windows: use PowerShell to extract zip
+    await run("powershell", [
+      "-NoProfile",
+      "-Command",
+      `Expand-Archive -Path '${archivePath}' -DestinationPath '${extractDir}' -Force`,
+    ]);
+  } else {
+    // Linux: use tar
+    await run("tar", ["xf", archivePath, "-C", extractDir]);
+  }
+
+  // Find the ffmpeg and ffprobe binaries inside the extracted directory
+  const ffmpegBinName = getToolBinaryName("ffmpeg");
+  const ffprobeBinName = getToolBinaryName("ffprobe");
+
+  const extractedFfmpeg = findBinary(extractDir, ffmpegBinName);
+  const extractedFfprobe = findBinary(extractDir, ffprobeBinName);
+
+  if (!extractedFfmpeg) throw new Error("ffmpeg binary not found in downloaded archive");
+  if (!extractedFfprobe) throw new Error("ffprobe binary not found in downloaded archive");
+
+  // Copy to final destination
+  const { copyFileSync, rmSync } = await import("fs");
+  copyFileSync(extractedFfmpeg, ffmpegDest);
+  copyFileSync(extractedFfprobe, ffprobeDest);
+
   if (process.platform !== "win32") {
-    chmodSync(destination, 0o755);
-  }
-}
-
-function installBundledFfmpegTools() {
-  const ffmpeg = require("@ffmpeg-installer/ffmpeg");
-  const ffprobe = require("@ffprobe-installer/ffprobe");
-  mkdirSync(FFMPEG_DIR, { recursive: true });
-
-  const ffmpegPath = join(FFMPEG_DIR, getToolBinaryName("ffmpeg"));
-  const ffprobePath = join(FFMPEG_DIR, getToolBinaryName("ffprobe"));
-  copyExecutable(ffmpeg.path, ffmpegPath);
-  copyExecutable(ffprobe.path, ffprobePath);
-
-  return {
-    ffmpegPath,
-    ffprobePath,
-    ffmpegLocation: FFMPEG_DIR,
-    ffmpegVersion: ffmpeg.version,
-    ffprobeVersion: ffprobe.version,
-  };
-}
-
-async function installImageioFfmpegTools(pythonBin) {
-  const imageioFfmpegPath = await runCapture(pythonBin, [
-    "-c",
-    "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())",
-  ]);
-  if (!imageioFfmpegPath || !existsSync(imageioFfmpegPath)) {
-    throw new Error("imageio ffmpeg binary not found");
+    chmodSync(ffmpegDest, 0o755);
+    chmodSync(ffprobeDest, 0o755);
   }
 
-  const ffprobe = require("@ffprobe-installer/ffprobe");
-  mkdirSync(FFMPEG_DIR, { recursive: true });
+  // Cleanup
+  try {
+    rmSync(extractDir, { recursive: true, force: true });
+    const { unlinkSync } = await import("fs");
+    unlinkSync(archivePath);
+  } catch {}
 
-  const ffmpegPath = join(FFMPEG_DIR, getToolBinaryName("ffmpeg"));
-  const ffprobePath = join(FFMPEG_DIR, getToolBinaryName("ffprobe"));
-  copyExecutable(imageioFfmpegPath, ffmpegPath);
-  copyExecutable(ffprobe.path, ffprobePath);
+  return { ffmpegPath: ffmpegDest, ffprobePath: ffprobeDest, ffmpegLocation: FFMPEG_DIR };
+}
 
-  const ffmpegVersionOutput = await runCapture(ffmpegPath, ["-version"]);
-  const ffmpegVersion = ffmpegVersionOutput.match(/ffmpeg version (\S+)/)?.[1] || "installed";
-
-  return {
-    ffmpegPath,
-    ffprobePath,
-    ffmpegLocation: FFMPEG_DIR,
-    ffmpegVersion,
-    ffprobeVersion: ffprobe.version,
-  };
+/**
+ * Recursively find a binary by name inside a directory (max depth 4).
+ */
+function findBinary(dir, binaryName, depth = 0) {
+  if (depth > 4) return null;
+  try {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name);
+      if (entry.isFile() && entry.name === binaryName) {
+        return fullPath;
+      }
+      if (entry.isDirectory()) {
+        const found = findBinary(fullPath, binaryName, depth + 1);
+        if (found) return found;
+      }
+    }
+  } catch {}
+  return null;
 }
 
 /**
@@ -305,59 +431,84 @@ async function main() {
     log(red("✗"), "pip not found — cannot install yt-dlp");
   }
 
-  // ─── Step 4: ffmpeg ─────────────────────────────────────
-  if (existsSync(pipBin)) {
-    log(dim("▸"), "Installing ffmpeg via imageio...");
+  // ─── Step 4: ffmpeg + ffprobe ──────────────────────────
+  const ffmpegBinPath = join(FFMPEG_DIR, getToolBinaryName("ffmpeg"));
+  const ffprobeBinPath = join(FFMPEG_DIR, getToolBinaryName("ffprobe"));
+
+  let ffmpegTools = null;
+
+  if (existsSync(ffmpegBinPath) && existsSync(ffprobeBinPath)) {
+    log(green("✓"), `ffmpeg already installed at ${dim(FFMPEG_DIR)}`);
+    ffmpegTools = {
+      ffmpegPath: ffmpegBinPath,
+      ffprobePath: ffprobeBinPath,
+      ffmpegLocation: FFMPEG_DIR,
+    };
+  } else {
+    log(dim("▸"), "Downloading ffmpeg and ffprobe...");
     try {
-      await run(pipBin, ["install", "--upgrade", "imageio[ffmpeg]"]);
-      log(green("✓"), "ffmpeg installed via imageio");
+      ffmpegTools = await downloadFfmpegTools();
+      log(green("✓"), `ffmpeg and ffprobe installed at ${dim(FFMPEG_DIR)}`);
     } catch (err) {
-      log(red("✗"), `Failed to install ffmpeg: ${err.message}`);
-      log(dim("  →"), "Trying system ffmpeg as fallback...");
+      log(red("✗"), `Failed to download ffmpeg: ${err.message}`);
+
+      // Fallback: try imageio[ffmpeg] via pip (installs a platform-native ffmpeg binary)
+      if (existsSync(pipBin)) {
+        log(dim("  →"), "Trying imageio[ffmpeg] as fallback...");
+        try {
+          await run(pipBin, ["install", "--upgrade", "imageio[ffmpeg]"]);
+          const venvPy = getVenvPythonBin();
+          const imageioBin = await runCapture(venvPy, [
+            "-c",
+            "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())",
+          ]);
+          if (imageioBin && existsSync(imageioBin)) {
+            mkdirSync(FFMPEG_DIR, { recursive: true });
+            const { copyFileSync } = await import("fs");
+            copyFileSync(imageioBin, ffmpegBinPath);
+            if (process.platform !== "win32") chmodSync(ffmpegBinPath, 0o755);
+            ffmpegTools = {
+              ffmpegPath: ffmpegBinPath,
+              ffprobePath: "ffprobe",  // imageio only provides ffmpeg, not ffprobe
+              ffmpegLocation: FFMPEG_DIR,
+            };
+            log(green("✓"), `ffmpeg installed via imageio at ${dim(FFMPEG_DIR)}`);
+            log(dim("  →"), "ffprobe will use system PATH — install ffprobe manually if needed.");
+          }
+        } catch (imageioErr) {
+          log(red("✗"), `imageio fallback also failed: ${imageioErr.message}`);
+        }
+      }
+
+      if (!ffmpegTools) {
+        log(dim("  →"), "Streamline will attempt to use system ffmpeg as fallback.");
+      }
     }
+  }
+
+  // Detect ffmpeg version
+  let ffmpegVersion = null;
+  if (ffmpegTools?.ffmpegPath && existsSync(ffmpegTools.ffmpegPath)) {
+    try {
+      const versionOutput = await runCapture(ffmpegTools.ffmpegPath, ["-version"]);
+      ffmpegVersion = versionOutput.match(/ffmpeg version (\S+)/)?.[1] || "installed";
+    } catch {}
+  }
+
+  let ffprobeVersion = null;
+  if (ffmpegTools?.ffprobePath && existsSync(ffmpegTools.ffprobePath)) {
+    try {
+      const versionOutput = await runCapture(ffmpegTools.ffprobePath, ["-version"]);
+      ffprobeVersion = versionOutput.match(/ffprobe version (\S+)/)?.[1] || "installed";
+    } catch {}
   }
 
   // ─── Step 5: Write env.json ─────────────────────────────
   log(dim("▸"), "Writing env manifest...");
 
-  let ffmpegTools = null;
-  if (existsSync(venvPython)) {
-    log(dim("->"), "Installing current ffmpeg from imageio...");
-    try {
-      ffmpegTools = await installImageioFfmpegTools(venvPython);
-      log(green("OK"), `ffmpeg ${ffmpegTools.ffmpegVersion} installed at ${dim(FFMPEG_DIR)}`);
-    } catch (err) {
-      log(red("X"), `Failed to install imageio ffmpeg: ${err.message}`);
-    }
-  }
-  if (!ffmpegTools) {
-    log(dim("â–¸"), "Installing bundled ffmpeg and ffprobe...");
-    try {
-      ffmpegTools = installBundledFfmpegTools();
-      log(green("âœ“"), `ffmpeg and ffprobe installed at ${dim(FFMPEG_DIR)}`);
-    } catch (err) {
-      log(red("âœ—"), `Failed to install bundled ffmpeg tools: ${err.message}`);
-      log(dim("  â†’"), "Trying imageio ffmpeg and system ffprobe as fallback...");
-    }
-  }
-
   let ffmpegPath = ffmpegTools?.ffmpegPath || "ffmpeg";
   let ffprobePath = ffmpegTools?.ffprobePath || "ffprobe";
   let ffmpegLocation = ffmpegTools?.ffmpegLocation || null;
-  if (!ffmpegTools) {
-    try {
-      const result = await runCapture(getVenvPythonBin(), [
-        "-c",
-        "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())",
-      ]);
-      if (result && existsSync(result)) {
-        ffmpegPath = result;
-        ffmpegLocation = result;
-      }
-    } catch {
-      // fallback to system ffmpeg
-    }
-  }
 
   let ytdlpVersion = null;
   try {
@@ -378,8 +529,8 @@ async function main() {
     ffmpegPath,
     ffprobePath,
     ffmpegLocation,
-    ffmpegVersion: ffmpegTools?.ffmpegVersion || null,
-    ffprobeVersion: ffmpegTools?.ffprobeVersion || null,
+    ffmpegVersion: ffmpegVersion || null,
+    ffprobeVersion: ffprobeVersion || null,
     installedAt: new Date().toISOString(),
     platform: process.platform,
     arch: process.arch,
@@ -389,7 +540,7 @@ async function main() {
   log(green("✓"), `Manifest written to ${dim(ENV_FILE)}`);
 
   console.log("");
-  log(cyan("✓"), "All dependencies ready. Run: streamline");
+  log(cyan("✓"), "All dependencies ready. Run: streamline-md");
   console.log("");
 }
 
