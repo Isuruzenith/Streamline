@@ -3,6 +3,14 @@
 All notable changes to Streamline are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.1](https://github.com/Isuruzenith/Streamline/compare/v1.3.0...v1.3.1) (2026-06-25)
+
+
+### Refactors
+
+* remove FFmpeg dependencies and replace with automated cross-platform provisioning script ([b887262](https://github.com/Isuruzenith/Streamline/commit/b887262748c42c2ee36e4906ee4bef14d141541e))
+* remove FFmpeg dependencies and replace with automated cross… ([5889083](https://github.com/Isuruzenith/Streamline/commit/588908332f8b40f6e245cb7f3fedc829c8dc95b5))
+
 ## [1.3.0](https://github.com/Isuruzenith/Streamline/compare/v1.2.0...v1.3.0) (2026-06-25)
 
 
