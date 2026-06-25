@@ -36,6 +36,7 @@
     "test:coverage": "vitest run --coverage",
     "test:server": "bun test server/test/",
     "prepublishOnly": "bun run build",
+    "prepare": "vite build",
     "start": "bun server/index.js"
   },
   "files": [
