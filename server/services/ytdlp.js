@@ -826,14 +826,9 @@ export function startDownload({
     }
   }, 2000);
 
-  let _dbgLineCount = 0;
   const processLine = (line, source = "stdout") => {
       const trimmed = line.trim();
       if (!trimmed) return;
-      _dbgLineCount++;
-      if (_dbgLineCount <= 30 || /\[download\]/i.test(trimmed)) {
-        console.log(`[dbg-ytdlp] src=${source} line#${_dbgLineCount} len=${line.length}: ${trimmed.slice(0, 120)}`);
-      }
       if (source === "stderr") {
         stderrLines.push(line);
         if (stderrLines.length > 500) stderrLines.shift();
@@ -847,7 +842,6 @@ export function startDownload({
 
       const progress = parseDownloadProgress(line);
       if (progress) {
-        console.log(`[dbg-ytdlp] PROGRESS emitted: ${JSON.stringify(progress)}`);
         onProgress?.(progress);
         return;
       }
@@ -882,36 +876,26 @@ export function startDownload({
     const reader = stream.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-    let _chunkCount = 0;
 
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        _chunkCount++;
-        if (_chunkCount <= 5) {
-          console.log(`[dbg-ytdlp] chunk#${_chunkCount} src=${source} bytes=${value?.byteLength} raw=${JSON.stringify(chunk.slice(0, 200))}`);
-        }
-        buffer += chunk;
+        buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split(/\r\n|\n|\r/);
         buffer = lines.pop() || "";
-        if (_chunkCount <= 5) {
-          console.log(`[dbg-ytdlp] chunk#${_chunkCount} split into ${lines.length} lines, buffer_remaining=${buffer.length}`);
-        }
         for (const line of lines) {
           processLine(line, source);
         }
       }
-    } catch (err) {
-      console.log(`[dbg-ytdlp] stream ${source} error:`, err?.message);
+    } catch {
+      // stream closed
     }
 
     buffer += decoder.decode();
     if (buffer.trim()) {
       processLine(buffer, source);
     }
-    console.log(`[dbg-ytdlp] stream ${source} ended after ${_chunkCount} chunks`);
   };
 
   // Read stdout and stderr concurrently so progress/logs stay live.
