@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Film, Music, Check } from "lucide-react";
+import { Film, Music, Check, ChevronDown } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { cn, formatBytes } from "@/lib/utils";
 
@@ -97,9 +97,16 @@ export default function FormatPicker() {
       {/* Advanced format listing */}
       <button
         onClick={() => setShowAdvanced(!showAdvanced)}
-        className="mt-4 text-xs font-mono text-text-dim hover:text-accent transition-colors"
+        className="mt-4 flex items-center gap-1.5 text-xs font-mono text-text-dim hover:text-accent transition-colors group"
       >
-        {showAdvanced ? "▲ Hide all formats" : "▼ Show all formats"} ({formats.length})
+        <ChevronDown
+          size={14}
+          className={cn(
+            "transition-transform duration-200",
+            showAdvanced && "rotate-180"
+          )}
+        />
+        {showAdvanced ? "Hide all formats" : "Show all formats"} ({formats.length})
       </button>
 
       {showAdvanced && (

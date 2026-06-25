@@ -37,7 +37,7 @@ export default function DownloadPage() {
         <p className="text-sm text-text-dim ml-[30px]">
           Paste any URL - supports 1000+ platforms
         </p>
-        <div className="h-px bg-border mt-4" />
+        <div className="sl-divider-gradient mt-4" />
       </div>
 
       <div className="space-y-6">

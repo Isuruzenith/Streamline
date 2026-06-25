@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Link2, Clipboard, Loader2, X, Rows3, Plus } from "lucide-react";
+import { Link2, Clipboard, Loader2, X, Rows3, Plus, ClipboardCheck } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +41,7 @@ export default function URLInput() {
   const [inputValue, setInputValue] = useState(mediaUrl);
   const [batchInput, setBatchInput] = useState("");
   const [validationError, setValidationError] = useState(null);
+  const [pasteNotice, setPasteNotice] = useState(false);
   const inputRef = useRef(null);
   const batchRef = useRef(null);
   const prewarmUrl = useMemo(
@@ -63,6 +64,8 @@ export default function URLInput() {
       const text = await navigator.clipboard.readText();
       if (/^https?:\/\/.+/.test(text.trim())) {
         setInputValue(text.trim());
+        setPasteNotice(true);
+        setTimeout(() => setPasteNotice(false), 2000);
       }
     } catch {
       // Clipboard permission denied - silent fail
@@ -276,14 +279,24 @@ export default function URLInput() {
               placeholder="Paste any URL - YouTube, TikTok, Instagram, Twitter/X..."
               disabled={mediaLoading}
               className={cn(
-                "w-full bg-surface border border-border rounded-md pl-11 pr-52 py-3",
+                "w-full bg-surface border rounded-md pl-11 pr-52 py-3",
                 "text-base text-text-primary font-sans placeholder:text-text-dim",
                 "focus:outline-none focus:border-border-accent focus:bg-surface-hover",
                 "transition-all duration-200",
                 "disabled:opacity-60",
-                (validationError || mediaError) && "border-status-red/40"
+                (validationError || mediaError) && "border-status-red/40",
+                mediaLoading
+                  ? "border-accent/40"
+                  : "border-border"
               )}
+              style={mediaLoading ? {
+                borderImage: "linear-gradient(90deg, var(--accent), rgba(214,111,69,0.2), var(--accent)) 1",
+                animation: "borderShimmer 1.5s linear infinite",
+              } : undefined}
             />
+
+            {/* Focus glow ring */}
+            <div className="absolute inset-0 rounded-md pointer-events-none transition-shadow duration-200 group-focus-within:shadow-[0_0_0_3px_rgba(214,111,69,0.12),0_0_16px_rgba(214,111,69,0.06)]" />
 
             <div className="absolute right-2 top-1/2 -translate-y-1/2">
               {renderActionButtons()}
@@ -306,8 +319,8 @@ export default function URLInput() {
           {PLATFORMS.map((platform) => (
             <span
               key={platform.name}
-              title="Supported platform"
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-2sm text-xs font-mono border border-border text-text-dim hover:text-text-muted transition-colors cursor-help select-none"
+              title={`${platform.name} is supported`}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-2sm text-xs font-mono border border-border text-text-dim hover:text-text-muted hover:border-border-accent hover:bg-surface-hover transition-all duration-150 cursor-default select-none"
             >
               <span style={{ color: platform.color, fontSize: "9px" }}>{platform.icon}</span>
               {platform.name}
@@ -317,9 +330,17 @@ export default function URLInput() {
       )}
 
       {!mediaUrl && !mediaLoading && !hasInput && (
-        <p className="mt-3 text-xs text-text-dim font-mono opacity-60">
-          Paste a URL to auto-fetch · Enter to submit
-        </p>
+        <div className="mt-3 flex items-center gap-2">
+          <p className="text-xs text-text-dim font-mono opacity-60">
+            Paste a URL to auto-fetch · Enter to submit
+          </p>
+          {pasteNotice && (
+            <span className="inline-flex items-center gap-1 text-xs text-accent font-mono animate-fade-in">
+              <ClipboardCheck size={11} />
+              Pasted from clipboard
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

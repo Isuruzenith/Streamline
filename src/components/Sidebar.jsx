@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Download, Settings, Clock, Moon, Sun } from "lucide-react";
+import { Download, Settings, Clock, Moon, Sun, Keyboard } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
 import pkg from "../../package.json";
@@ -49,7 +49,7 @@ export default function Sidebar() {
       <aside className="hidden md:flex w-[220px] border-r border-border bg-sidebar flex-col sticky top-0 h-screen overflow-y-auto flex-shrink-0 select-none">
         <div className="h-px bg-border-accent opacity-50 flex-shrink-0" />
 
-        <div className="px-4 pt-6 pb-5">
+        <div className="px-4 pt-6 pb-4">
           <div className="flex items-center gap-2.5 mb-1">
             <img
               src="/favicon.svg"
@@ -65,9 +65,9 @@ export default function Sidebar() {
           <div className="text-2xs font-mono text-text-dim tracking-widest uppercase mt-1">
             Media Downloader
           </div>
+          {/* Gradient underline */}
+          <div className="sl-divider-gradient mt-3" />
         </div>
-
-        <div className="h-px bg-border mx-0 mb-3" />
 
         <nav className="flex-1 flex flex-col gap-0.5">
           {navItems.map((item) => {
@@ -100,23 +100,29 @@ export default function Sidebar() {
           })}
         </nav>
 
-        <div className="px-4 py-4 border-t border-border space-y-3">
-          <button
-            onClick={toggleTheme}
-            title="Toggle theme"
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-text-dim transition-colors duration-300 hover:border-border-accent hover:text-accent hover:bg-surface-hover"
-          >
-            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          <div className="flex flex-wrap gap-1.5">
-            <kbd>Mod V</kbd>
-            <kbd>Mod B</kbd>
-            <kbd>Esc</kbd>
+        <div className="sl-sidebar-footer">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-text-dim transition-all duration-200 hover:border-border-accent hover:text-accent hover:bg-surface-hover hover:scale-110"
+            >
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <div className="flex items-center gap-1.5" title="Mod+V: Paste  ·  Mod+B: Batch  ·  Esc: Clear">
+              <Keyboard size={12} className="text-text-dim" />
+              <div className="flex gap-1">
+                <kbd>⌘V</kbd>
+                <kbd>⌘B</kbd>
+                <kbd>Esc</kbd>
+              </div>
+            </div>
           </div>
-          <div className="space-y-1 text-2xs font-mono text-text-dim">
-            <div>v{pkg.version}</div>
-            <div className="text-text-faint">Open Source</div>
+          <div className="flex items-center gap-2 mt-2 text-2xs font-mono text-text-dim">
+            <span>v{pkg.version}</span>
+            <span className="text-text-faint">·</span>
+            <span className="text-text-faint">Open Source</span>
           </div>
         </div>
       </aside>

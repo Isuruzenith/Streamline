@@ -72,6 +72,11 @@ export default {
       spacing: {
         4.5: "18px",
         5.5: "22px",
+        safe: "env(safe-area-inset-bottom, 0px)",
+      },
+      backdropBlur: {
+        xs: "2px",
+        glass: "12px",
       },
       animation: {
         "fade-in": "fadeIn 0.3s ease-out",

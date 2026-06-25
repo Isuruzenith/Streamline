@@ -10,6 +10,7 @@ import {
   ExternalLink,
   ShieldAlert,
   Loader2,
+  ChevronDown,
 } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import EnvironmentPanel from "@/components/EnvironmentPanel";
@@ -196,7 +197,7 @@ export default function SettingsPage() {
             Settings
           </h1>
         </div>
-        <div className="h-px bg-border" />
+        <div className="sl-divider-gradient" />
       </div>
 
       {/* Tabs */}
@@ -223,9 +224,10 @@ export default function SettingsPage() {
 
       {/* Tab content */}
       {settingsTab === "general" && (
-        <div className="animate-fade-in space-y-6">
+        <div className="space-y-6">
           {/* Output path */}
-          <div>
+          <div className="sl-card">
+            <div className="sl-section-label !mt-0">Output</div>
             <label className="block text-sm font-semibold text-text-secondary font-serif mb-2">
               Output folder
             </label>
@@ -237,8 +239,9 @@ export default function SettingsPage() {
                 placeholder="~/Downloads/Streamline (default)"
                 className="sl-input flex-1"
               />
-              <button type="button" onClick={handleBrowseFolder} className="sl-btn sl-btn-outline">
+              <button type="button" onClick={handleBrowseFolder} className="sl-btn sl-btn-outline gap-1.5">
                 <FolderOpen size={15} />
+                <span className="hidden sm:inline">Browse</span>
               </button>
             </div>
             {!outputPath && (
@@ -251,41 +254,45 @@ export default function SettingsPage() {
             </p>
           </div>
 
-          <div className="space-y-1">
-            <label className="sl-label">Speed limit</label>
-            <div className="flex items-center gap-2">
+          <div className="sl-card">
+            <div className="sl-section-label !mt-0">Performance</div>
+            <div className="space-y-1">
+              <label className="sl-label">Speed limit</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0 = unlimited"
+                  value={parseInt(downloadOptions.rateLimit) || ""}
+                  onChange={(e) =>
+                    updateDownloadOption("rateLimit", e.target.value ? `${e.target.value}K` : "")
+                  }
+                  className="sl-input w-28 tabular-nums"
+                />
+                <span className="text-xs text-text-dim font-mono">KB/s</span>
+              </div>
+              <p className="sl-hint">Throttle yt-dlp download bandwidth. 0 means unlimited.</p>
+            </div>
+
+            <div className="space-y-1 mt-4">
+              <label className="sl-label">Concurrent downloads</label>
               <input
                 type="number"
-                min="0"
-                placeholder="0 = unlimited"
-                value={parseInt(downloadOptions.rateLimit) || ""}
+                min="1"
+                max="4"
+                value={downloadOptions.concurrencyLimit || 1}
                 onChange={(e) =>
-                  updateDownloadOption("rateLimit", e.target.value ? `${e.target.value}K` : "")
+                  updateDownloadOption("concurrencyLimit", Math.max(1, Math.min(4, parseInt(e.target.value, 10) || 1)))
                 }
                 className="sl-input w-28 tabular-nums"
               />
-              <span className="text-xs text-text-dim font-mono">KB/s</span>
+              <p className="sl-hint">Number of files to download at the same time (1 to 4).</p>
             </div>
-            <p className="sl-hint">Throttle yt-dlp download bandwidth. 0 means unlimited.</p>
-          </div>
-
-          <div className="space-y-1">
-            <label className="sl-label">Concurrent downloads</label>
-            <input
-              type="number"
-              min="1"
-              max="4"
-              value={downloadOptions.concurrencyLimit || 1}
-              onChange={(e) =>
-                updateDownloadOption("concurrencyLimit", Math.max(1, Math.min(4, parseInt(e.target.value, 10) || 1)))
-              }
-              className="sl-input w-28 tabular-nums"
-            />
-            <p className="sl-hint">Number of files to download at the same time (1 to 4).</p>
           </div>
 
           {/* Filename template */}
-          <div>
+          <div className="sl-card">
+            <div className="sl-section-label !mt-0">Filename</div>
             <label className="block text-sm font-semibold text-text-secondary font-serif mb-2">
               Filename template
             </label>
@@ -310,7 +317,7 @@ export default function SettingsPage() {
           </div>
 
           {/* ─── Cookie Authentication Section ─────────────────────── */}
-          <div className="pt-2">
+          <div className="sl-card">
             <label className="block text-sm font-semibold text-text-secondary font-serif mb-3">
               <span className="flex items-center gap-2">
                 <Cookie size={14} className="text-accent" />
@@ -318,69 +325,75 @@ export default function SettingsPage() {
               </span>
             </label>
 
-            {/* Instructions */}
-            <div className="p-4 bg-surface rounded-lg border border-border space-y-3 mb-4">
-              <p className="text-sm text-text-muted leading-relaxed">
-                To download authenticated or age-restricted content, you must provide a{" "}
-                <code className="sl-code text-2xs">cookies.txt</code> file.
-              </p>
+            {/* Collapsible Instructions */}
+            <details className="sl-collapsible mb-4">
+              <summary className="flex items-center gap-2 text-xs font-mono text-text-dim hover:text-accent transition-colors py-2">
+                <ChevronDown size={12} className="transition-transform duration-200 details-open:rotate-180" />
+                How to get cookies
+              </summary>
+              <div className="p-4 bg-surface rounded-lg border border-border space-y-3 mt-2">
+                <p className="text-sm text-text-muted leading-relaxed">
+                  To download authenticated or age-restricted content, you must provide a{" "}
+                  <code className="sl-code text-2xs">cookies.txt</code> file.
+                </p>
 
-              <div className="space-y-2">
-                <div className="flex items-start gap-2">
-                  <span className="text-xs text-text-dim mt-0.5 font-mono shrink-0">Chrome/Edge</span>
-                  <p className="text-sm text-text-muted">
-                    Install the{" "}
-                    <a
-                      href="https://chromewebstore.google.com/detail/cclelndahbckbenkjhflpdbgdldlbecc"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-accent hover:text-accent/80 underline underline-offset-2 inline-flex items-center gap-1"
-                    >
-                      Get cookies.txt LOCALLY
-                      <ExternalLink size={10} />
-                    </a>{" "}
-                    extension.
-                  </p>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-text-dim mt-0.5 font-mono shrink-0">Chrome/Edge</span>
+                    <p className="text-sm text-text-muted">
+                      Install the{" "}
+                      <a
+                        href="https://chromewebstore.google.com/detail/cclelndahbckbenkjhflpdbgdldlbecc"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-accent hover:text-accent/80 underline underline-offset-2 inline-flex items-center gap-1"
+                      >
+                        Get cookies.txt LOCALLY
+                        <ExternalLink size={10} />
+                      </a>{" "}
+                      extension.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-text-dim mt-0.5 font-mono shrink-0">Firefox</span>
+                    <p className="text-sm text-text-muted">
+                      Install the{" "}
+                      <a
+                        href="https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-accent hover:text-accent/80 underline underline-offset-2 inline-flex items-center gap-1"
+                      >
+                        cookies.txt
+                        <ExternalLink size={10} />
+                      </a>{" "}
+                      extension.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-xs text-text-dim mt-0.5 font-mono shrink-0">Firefox</span>
-                  <p className="text-sm text-text-muted">
-                    Install the{" "}
-                    <a
-                      href="https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-accent hover:text-accent/80 underline underline-offset-2 inline-flex items-center gap-1"
-                    >
-                      cookies.txt
-                      <ExternalLink size={10} />
-                    </a>{" "}
-                    extension.
-                  </p>
-                </div>
+
+                <p className="text-xs text-text-dim leading-relaxed">
+                  After installing, visit the website you want to download from, log in, then export cookies for that site.
+                  For YouTube bot/sign-in errors, use a private/incognito YouTube session, open{" "}
+                  <code className="sl-code text-2xs">youtube.com/robots.txt</code>, export only YouTube cookies, then upload that file here.
+                </p>
               </div>
 
-              <p className="text-xs text-text-dim leading-relaxed">
-                After installing, visit the website you want to download from, log in, then export cookies for that site.
-                For YouTube bot/sign-in errors, use a private/incognito YouTube session, open{" "}
-                <code className="sl-code text-2xs">youtube.com/robots.txt</code>, export only YouTube cookies, then upload that file here.
-              </p>
-            </div>
-
-            {/* Security Warning */}
-            <div className="p-3.5 bg-status-red/5 rounded-lg border border-status-red/20 mb-4">
-              <div className="flex items-start gap-2.5">
-                <ShieldAlert size={16} className="text-status-red shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-status-red mb-1">Security warning</p>
-                  <p className="text-xs text-status-red/80 leading-relaxed">
-                    If you have previously installed an extension called exactly{" "}
-                    <strong>"Get cookies.txt"</strong> (without the word "LOCALLY"),
-                    uninstall it immediately. It has been reported as malware and removed from the Chrome Web Store.
-                  </p>
+              {/* Security Warning */}
+              <div className="p-3.5 bg-status-red/5 rounded-lg border border-status-red/20 mt-3">
+                <div className="flex items-start gap-2.5">
+                  <ShieldAlert size={16} className="text-status-red shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-status-red mb-1">Security warning</p>
+                    <p className="text-xs text-status-red/80 leading-relaxed">
+                      If you have previously installed an extension called exactly{" "}
+                      <strong>"Get cookies.txt"</strong> (without the word "LOCALLY"),
+                      uninstall it immediately. It has been reported as malware and removed from the Chrome Web Store.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </details>
 
             {/* Browser import */}
             <div className="p-4 bg-surface rounded-lg border border-border mb-4">
