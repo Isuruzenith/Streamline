@@ -62,7 +62,7 @@ export default function FormatPicker() {
     <div className="animate-slide-up">
       {/* Quick presets */}
       <div className="sl-section-label">Format</div>
-      <div className="inline-flex max-w-full rounded-md border border-border overflow-hidden bg-surface">
+      <div className="grid grid-cols-2 md:flex md:flex-row w-full md:w-auto rounded-md border border-border bg-border overflow-hidden gap-[1px]">
         {PRESETS.map((preset) => {
           const Icon = preset.icon;
           const isSelected = selectedPreset === preset.id;
@@ -72,10 +72,10 @@ export default function FormatPicker() {
               id={`preset-${preset.id}`}
               onClick={() => setSelectedPreset(preset.id)}
               className={cn(
-                "flex items-center gap-2 px-3.5 py-2 text-xs font-mono transition-all border-r border-border last:border-0 active:scale-[0.97]",
+                "flex items-center justify-center md:justify-start gap-2 px-3.5 py-2 text-xs font-mono transition-all active:scale-[0.97] flex-1",
                 isSelected
                   ? "bg-accent-soft text-accent"
-                  : "bg-transparent text-text-muted hover:text-text-primary hover:bg-surface-hover"
+                  : "bg-surface text-text-muted hover:text-text-primary hover:bg-surface-hover"
               )}
             >
               <Icon
