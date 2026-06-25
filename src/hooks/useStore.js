@@ -19,6 +19,10 @@ const DEFAULT_DOWNLOAD_OPTIONS = {
   rateLimit: "",
   concurrentFragments: 8,
   customFlags: "",
+  concurrencyLimit: 1,
+  trimVideo: false,
+  trimStart: "",
+  trimEnd: "",
 };
 
 const UNCHECKED_DOWNLOAD_OPTIONS = {
@@ -28,6 +32,7 @@ const UNCHECKED_DOWNLOAD_OPTIONS = {
   embedMetadata: false,
   sponsorBlock: false,
   downloadArchive: false,
+  trimVideo: false,
 };
 
 function readPersistedSettings() {
@@ -112,12 +117,14 @@ const useStore = create((set, get) => ({
   settingsTab: "general", // "general" | "environment"
   sidebarCollapsed: false,
   batchMode: false,
+  logsCollapsed: false,
   theme: initialTheme,
 
   setActivePage: (page) => set({ activePage: page }),
   setSettingsTab: (tab) => set({ settingsTab: tab }),
   setBatchMode: (batchMode) => set({ batchMode }),
   toggleBatchMode: () => set((s) => ({ batchMode: !s.batchMode })),
+  setLogsCollapsed: (collapsed) => set({ logsCollapsed: collapsed }),
   setTheme: (theme) => {
     if (typeof document !== "undefined") {
       document.documentElement.setAttribute("data-theme", theme);

@@ -70,7 +70,7 @@ app.listen(PORT, () => {
   console.log(`  → http://localhost:${PORT}`);
   console.log(`  → WebSocket at ws://localhost:${PORT}/ws`);
   if (IS_DEV) {
-    console.log("  → Dev mode: frontend at http://localhost:5173");
+    console.log("  → Dev mode: frontend at http://localhost:5200");
   }
   console.log("");
 });

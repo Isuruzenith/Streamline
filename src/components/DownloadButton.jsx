@@ -37,7 +37,8 @@ export default function DownloadButton() {
             ? "bg-status-green/20 text-status-green border border-status-green/30"
             : isDownloading
               ? "bg-accent/10 text-accent border border-accent/20 cursor-wait"
-              : "sl-btn-primary"
+              : "sl-btn-primary",
+          !disabled && !isDownloading && !isComplete && "sl-pulse-glow"
         )}
       >
         {isDownloading ? (
@@ -47,7 +48,7 @@ export default function DownloadButton() {
           </>
         ) : isComplete ? (
           <>
-            <CheckCircle2 size={18} />
+            <CheckCircle2 size={18} style={{ animation: "checkBurst 400ms ease-out" }} />
             <span>Download Complete</span>
           </>
         ) : (

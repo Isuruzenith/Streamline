@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Clock,
   FolderOpen,
@@ -9,6 +9,7 @@ import {
   AlertCircle,
   Download,
   Film,
+  Search,
 } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
@@ -23,9 +24,17 @@ export default function HistoryPage() {
   const startDownload = useStore((s) => s.startDownload);
   const setActivePage = useStore((s) => s.setActivePage);
 
+  const [filter, setFilter] = useState("");
+
   useEffect(() => {
     fetchHistory();
   }, []);
+
+  const filteredHistory = filter.trim()
+    ? history.filter((item) =>
+        (item.title || "").toLowerCase().includes(filter.toLowerCase())
+      )
+    : history;
 
   return (
     <div>
@@ -47,8 +56,22 @@ export default function HistoryPage() {
             </button>
           )}
         </div>
-        <div className="h-px bg-border" />
+        <div className="sl-divider-gradient" />
       </div>
+
+      {/* Search filter */}
+      {history.length > 3 && (
+        <div className="relative mb-4">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" />
+          <input
+            type="text"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter downloads..."
+            className="sl-input pl-9 py-2 text-sm"
+          />
+        </div>
+      )}
 
       {/* Loading */}
       {historyLoading && history.length === 0 && (
@@ -78,10 +101,17 @@ export default function HistoryPage() {
         </div>
       )}
 
+      {/* No results */}
+      {filter && filteredHistory.length === 0 && history.length > 0 && (
+        <div className="text-center py-12 text-text-dim animate-fade-in">
+          <p className="text-sm">No downloads match "{filter}"</p>
+        </div>
+      )}
+
       {/* History list */}
-      {history.length > 0 && (
+      {filteredHistory.length > 0 && (
         <div className="space-y-2 animate-fade-in">
-          {history.map((item) => (
+          {filteredHistory.map((item) => (
             <HistoryItem
               key={item.id}
               item={item}
@@ -113,9 +143,14 @@ function HistoryItem({ item, onOpenFolder, onRedownload, onRemove }) {
     : null;
 
   return (
-    <div className="flex items-start gap-3.5 p-3.5 rounded-md border bg-surface border-border hover:bg-surface-hover transition-colors">
+    <div
+      className={cn(
+        "group flex items-start gap-3.5 p-3.5 rounded-md border bg-surface border-border hover:bg-surface-hover transition-all duration-150",
+        isError && "sl-history-failed"
+      )}
+    >
       {/* Thumbnail */}
-      <div className="w-12 h-8 rounded-2sm overflow-hidden flex-shrink-0 bg-surface border border-border">
+      <div className="w-16 h-10 rounded-2sm overflow-hidden flex-shrink-0 bg-surface border border-border">
       {item.thumbnail ? (
           <img
             src={item.thumbnail}
@@ -125,14 +160,14 @@ function HistoryItem({ item, onOpenFolder, onRedownload, onRemove }) {
           />
       ) : (
         <div className="w-full h-full flex items-center justify-center">
-          <Film size={12} className="text-text-dim" />
+          <Film size={14} className="text-text-dim" />
         </div>
       )}
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-text-primary font-serif truncate">
+        <div className="text-sm font-semibold text-text-primary font-serif sl-line-clamp-2">
           {item.title || "Untitled"}
         </div>
         <div className="flex items-center gap-3 mt-0.5 text-xs font-mono text-text-dim">
@@ -151,8 +186,8 @@ function HistoryItem({ item, onOpenFolder, onRedownload, onRemove }) {
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-1 flex-shrink-0">
+      {/* Actions — show on hover */}
+      <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
         {isComplete && item.filepath && (
           <button
             onClick={onOpenFolder}

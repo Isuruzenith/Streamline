@@ -23,7 +23,7 @@ export default function MediaPreview() {
   if (mediaLoading) {
     return (
       <div className="sl-card sl-card-accent animate-slide-up overflow-hidden">
-        <div className="relative -mx-4.5 -mt-4.5 mb-4 aspect-video overflow-hidden rounded-t-md sl-skeleton" />
+        <div className="relative -mx-4.5 -mt-4.5 mb-4 aspect-video overflow-hidden rounded-t-md sl-skeleton animate-pulse" />
         <div className="space-y-3">
           <div className="h-5 w-4/5 rounded sl-skeleton" />
           <div className="flex gap-3">
@@ -66,7 +66,7 @@ export default function MediaPreview() {
     <div className="sl-card sl-card-accent animate-slide-up overflow-hidden">
       {/* Thumbnail */}
       {thumbnail && (
-        <div className="relative -mx-4.5 -mt-4.5 mb-4 aspect-video overflow-hidden rounded-t-md bg-surface-hover">
+        <div className="relative -mx-4.5 -mt-4.5 mb-4 aspect-video overflow-hidden rounded-t-md bg-surface-hover group/thumb">
           {imgFailed ? (
             <div
               className="flex w-full aspect-video items-center justify-center text-text-dim"
@@ -78,20 +78,20 @@ export default function MediaPreview() {
             <img
               src={thumbnail}
               alt={title || "Video thumbnail"}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover transition-transform duration-300 group-hover/thumb:scale-[1.03]"
               loading="lazy"
               onError={() => setImgFailed(true)}
             />
           )}
-          {/* Duration badge */}
+          {/* Duration badge - glassmorphism */}
           {duration > 0 && (
-            <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/70 rounded text-xs font-mono text-white backdrop-blur-sm">
+            <div className="absolute bottom-2 right-2 px-2.5 py-1 sl-glass rounded-md text-xs font-mono text-white">
               {formatDuration(duration)}
             </div>
           )}
-          {/* Source badge */}
+          {/* Source badge - glassmorphism */}
           {extractor_key && (
-            <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded text-2xs font-mono text-white/80 backdrop-blur-sm uppercase tracking-wider">
+            <div className="absolute top-2 left-2 px-2.5 py-1 sl-glass rounded-md text-2xs font-mono text-white/90 uppercase tracking-wider">
               {extractor_key}
             </div>
           )}

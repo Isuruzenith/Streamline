@@ -1,4 +1,4 @@
-import { resolveYtdlpBin, resolveFFmpegLocation, resolveBunBin } from "./environment.js";
+import { resolveYtdlpBin, resolveFFmpegLocation, resolveBunBin, resolvePythonBin } from "./environment.js";
 import { getCookieArgs } from "./cookies.js";
 import { homedir } from "os";
 import { basename, join, resolve } from "path";
@@ -587,7 +587,7 @@ export function startDownload({
   onError,
   onLog,
 }) {
-  const ytdlpBin = requireYtdlpBin();
+  const pythonBin = resolvePythonBin();
   const ffmpegLocation = resolveFFmpegLocation();
   const customArgsParsed = parseCustomFlags(options.customFlags);
   const videoFormat = String(options.videoFormat || "").trim().toLowerCase();
@@ -601,8 +601,12 @@ export function startDownload({
   ]);
 
   const args = [
-    ytdlpBin,
+    pythonBin,
+    "-u",
+    "-m",
+    "yt_dlp",
     "--newline",
+    "--progress",
     "--no-warnings",
     "--no-mtime",
     "--windows-filenames", // Sanitize filenames for Windows
@@ -704,6 +708,13 @@ export function startDownload({
     args.push("--sponsorblock-remove", "all");
   }
 
+  if (options.trimVideo && (options.trimStart || options.trimEnd)) {
+    const start = options.trimStart?.trim() || "0";
+    const end = options.trimEnd?.trim() || "inf";
+    args.push("--download-sections", `*${start}-${end}`);
+    args.push("--force-keyframes-at-cuts");
+  }
+
   if (options.downloadArchive) {
     const streamlineDir = join(homedir(), ".streamline");
     mkdirSync(streamlineDir, { recursive: true });
@@ -727,6 +738,7 @@ export function startDownload({
   const proc = Bun.spawn(args, {
     stdout: "pipe",
     stderr: "pipe",
+    env: { ...process.env, PYTHONUNBUFFERED: "1" },
   });
 
   onStart?.();
@@ -870,7 +882,7 @@ export function startDownload({
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split(/\r?\n/);
+        const lines = buffer.split(/\r\n|\n|\r/);
         buffer = lines.pop() || "";
         for (const line of lines) {
           processLine(line, source);

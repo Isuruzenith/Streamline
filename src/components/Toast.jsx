@@ -57,7 +57,7 @@ export default function Toast() {
   const icon = ICONS[renderedToast.type] || ICONS.info;
 
   return (
-    <div className={cn("fixed bottom-6 right-6 z-50", isExiting ? "sl-toast-exit" : "sl-toast-enter")}>
+    <div className={cn("fixed top-4 right-4 md:top-auto md:bottom-6 md:right-6 z-50", isExiting ? "sl-toast-exit" : "sl-toast-enter")}>
       <div
         className={cn(
           "relative flex items-start gap-3 px-4 py-3.5 rounded-md border shadow-lg backdrop-blur-sm overflow-hidden",

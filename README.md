@@ -1,32 +1,40 @@
 <div align="center">
-  <img src="public/favicon.svg" alt="Streamline" width="64" />
+  <a href="https://github.com/flameonlabs/streamline">
+    <img src="public/favicon.svg" alt="Streamline Logo" width="96" height="96" style="margin-bottom: 20px;" />
+  </a>
 
-  # Streamline
-  **A beautiful, open-source WebUI for yt-dlp**
+# Streamline
 
-  Download videos and audio from 1000+ platforms — YouTube, TikTok, Instagram, Twitter/X, Facebook, and more.
+### **A gorgeous, high-performance WebUI for yt-dlp**
 
-  ![Version](https://img.shields.io/badge/version-1.0.0-orange)
-  ![License](https://img.shields.io/badge/license-MIT-green)
-  ![Bun](https://img.shields.io/badge/runtime-Bun-black)
+  Download high-fidelity video and audio from 1000+ platforms — YouTube, TikTok, Instagram, Twitter/X, Facebook, SoundCloud, and more.
 
-  ![Streamline Screenshot](public/demo.svg)
+  [![npm version](https://img.shields.io/npm/v/streamline-md?color=ff5733&style=flat-square)](https://www.npmjs.com/package/streamline-md)
+  [![License](https://img.shields.io/npm/l/streamline-md?color=33ff57&style=flat-square)](LICENSE)
+  [![Bun Version](https://img.shields.io/badge/runtime-Bun-%23000000.svg?style=flat-square&logo=bun&logoColor=white)](https://bun.sh)
+  [![Node Compatibility](https://img.shields.io/badge/node-%3E%3D%2018.0.0-blue.svg?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org)
+  [![GitHub stars](https://img.shields.io/github/stars/flameonlabs/streamline?style=flat-square&color=gold)](https://github.com/flameonlabs/streamline/stargazers)
+
+<br />
+
+
+
 </div>
 
 ---
 
 ## ✨ Features
 
-- **1000+ supported platforms** via yt-dlp — YouTube, TikTok, Instagram, Twitter/X, SoundCloud, Bandcamp, and hundreds more
-- **Format picker** — choose resolution (4K, 1080p, 720p, 480p) or audio-only; defaults to best MP4
-- **Download queue** — sequential queue with drag-to-reorder, pause/resume, and retry
-- **Live logs** — real-time yt-dlp stdout/stderr streamed to the terminal panel via WebSocket
-- **Download history** — persistent log of all past downloads with file-open shortcut
-- **Playlist support** — bulk-select individual playlist entries before downloading
-- **Advanced options** — subtitles, thumbnails, metadata embedding, SponsorBlock, rate limiting, custom yt-dlp flags
-- **Cookie authentication** — upload browser cookies for age-restricted or members-only content
-- **Dark & light theme** — toggle in the sidebar; preference persisted to localStorage
-- **Desktop notifications** — browser notifications on download complete
+- **1000+ Platforms Supported** — Powered by `yt-dlp` to download content from YouTube, TikTok, Instagram, Twitter/X, SoundCloud, Bandcamp, and hundreds of others.
+- **Smart Format Picker** — Quickly select target resolution (4K, 1080p, 720p, 480p) or extract audio-only; defaults to the best available MP4.
+- **Interactive Download Queue** — Real-time sequential queue management with drag-to-reorder, pause/resume, and retry capabilities.
+- **Live Streamed Logs** — Keep track of active downloads with live stdout/stderr logs streamed via WebSockets to a sleek terminal panel.
+- **Persistent History** — A local download history index with direct shortcuts to open downloaded files in your OS file manager.
+- **Playlist Downloader** — Paste playlist links, preview all entries, checklist-select specific tracks, and download them in batch.
+- **Advanced Post-Processing** — Embedded subtitles, cover art/thumbnails, SponsorBlock skip integration, download speed limiting, and custom yt-dlp arguments.
+- **Cookie Authentication** — Drag-and-drop or upload your browser `cookies.txt` file to bypass age restriction gates or fetch member-only videos.
+- **Adaptive Theme Engine** — Toggle fluidly between dark and light modes, with system preference synced to `localStorage`.
+- **System Notifications** — Stay informed with desktop/browser notifications when background downloads complete.
 
 ---
 
@@ -34,229 +42,253 @@
 
 ### Prerequisites
 
-| Tool | Version | Notes |
-|------|---------|-------|
-| [Bun](https://bun.sh) | >= 1.1 | JavaScript runtime + package manager |
-| Python | >= 3.9 | Required for yt-dlp |
-| yt-dlp | latest | Auto-installed on first run |
-| ffmpeg | any | Auto-installed via npm package |
+Streamline manages its own isolated dependencies (Python, yt-dlp, and ffmpeg) on the first start. You only need a few base tools:
+
+| Requirement               | Supported Version | Role in Streamline                                                            |
+|:------------------------- |:----------------- |:----------------------------------------------------------------------------- |
+| **[Bun](https://bun.sh)** | `>= 1.1`          | Recommended high-performance JS runtime & package manager                     |
+| **Python**                | `>= 3.9`          | Required backend parser tool for running `yt-dlp` subprocesses                |
+| **yt-dlp**                | `latest`          | Auto-installed and self-updated inside the app's isolated virtual environment |
+| **ffmpeg**                | `bundled`         | Auto-installed via npm wrapper to handle stream merges and conversions        |
 
 ### Install & Run
 
-```bash
-# Install (downloads yt-dlp and ffmpeg automatically)
-npx streamline
+You can run Streamline instantly without a manual clone, or install it globally as a command-line tool.
 
-# Or install globally:
-npm install -g streamline
-streamline
+> [!NOTE]
+> Make sure to use the correct **`streamline-md`** package name on npm.
+
+```bash
+# Option A: Run instantly via npx
+npx streamline-md
+
+# Option B: Install globally using Bun
+bun add -g streamline-md
+streamline-md
+
+# Option C: Install globally using npm
+npm install -g streamline-md
+streamline-md
 ```
 
-The app opens at **http://localhost:7979**
+Once started, the application will automatically launch your default browser and open at **[http://localhost:7979](http://localhost:7979)**.
 
-### Development Mode
+### Development Setup
+
+To modify Streamline or run from source:
 
 ```bash
-git clone https://github.com/flameonlabs/streamline
+# 1. Clone the repository
+git clone https://github.com/flameonlabs/streamline.git
 cd streamline
+
+# 2. Install dev and runtime dependencies
 bun install
+
+# 3. Start development servers concurrently
 bun run dev
 ```
 
-- Frontend: http://localhost:5173
-- Backend: http://localhost:7979
-- WebSocket: ws://localhost:7979/ws
+- **Frontend Hot-Reloading:** [http://localhost:5200](http://localhost:5200)
+- **Backend API Server:** [http://localhost:7979](http://localhost:7979)
+- **WebSocket Gateway:** `ws://localhost:7979/ws`
 
 ---
 
-## 🖥️ Usage
+## 🖥️ Usage Walkthrough
 
-1. **Paste a URL** into the input bar — metadata is fetched automatically
-2. **Pick a format** in the right panel (defaults to best MP4)
-3. **Click Download** — the video moves to the queue immediately
-4. **Watch progress** in the Queue panel and live yt-dlp output in the Logs panel
-5. **Open the file** when complete using the folder icon
+1. **Paste a Link:** Drop any video or audio URL into the main input bar. Streamline will automatically query the link and parse available formats.
+2. **Configure Settings:** Choose your preferred video resolution, toggle audio-only mode, or customize filenames in the right sidebar.
+3. **Queue it Up:** Click **Download** to instantly push the item into the queue.
+4. **Monitor Real-time:** Watch progress percentages, speed metrics, and estimated time of arrival (ETA) update in the queue. Expand the logs panel to see raw yt-dlp process outputs.
+5. **Open & Enjoy:** When complete, click the folder icon next to the item to open the downloaded file directly on your computer.
 
 ### Batch Downloads
 
-Click **Batch** next to the URL bar, paste multiple URLs (one per line or comma-separated), then click **Download All**.
+Toggle the **Batch** option next to the URL input to paste multiple video links at once (one per line). Click **Download All** to push all entries into the processing queue.
 
-### Playlists
+### Downloading Playlists
 
-Paste a playlist URL — Streamline detects it automatically and shows a checklist. Select individual entries, then click **Download Selected**.
+When a playlist URL (e.g., YouTube playlist, Album) is detected, Streamline displays a checklist of all contained tracks. Choose which videos you want to keep, customize individual formats, and click **Download Selected**.
 
 ---
 
-## ⚙️ Settings
+## ⚙️ Settings Directory
 
-### General
+### General Customization
 
-| Setting | Default | Description |
-| --- | --- | --- |
-| Output folder | `~/Downloads/Streamline` | Where completed files are saved |
-| Filename template | `%(title)s.%(ext)s` | yt-dlp output template |
+| Configuration         | Default Value            | Description                                            |
+|:--------------------- |:------------------------ |:------------------------------------------------------ |
+| **Output directory**  | `~/Downloads/Streamline` | Absolute destination folder for completed media files. |
+| **Filename template** | `%(title)s.%(ext)s`      | Standard `yt-dlp` output formatting template.          |
 
-### Download Options
+### Technical Download Flags
 
-| Option | Default |
-| --- | --- |
-| Video format | MP4 |
-| Audio format (audio-only) | MP3 |
-| Subtitles | Off |
-| Embed metadata | Off |
-| SponsorBlock | Off |
-| Concurrent fragments | 8 |
-| Rate limit | Unlimited |
-| Custom yt-dlp flags | - |
+| Flag / Option            | Default     | Purpose / Details                                                       |
+|:------------------------ |:----------- |:----------------------------------------------------------------------- |
+| **Video format**         | `MP4`       | Primary format target container for video streams.                      |
+| **Audio format**         | `MP3`       | Output audio format target (when downloading audio-only).               |
+| **Subtitles**            | `Off`       | Auto-extracts and embeds subtitle tracks into the file.                 |
+| **Embed metadata**       | `Off`       | Saves artist, description, cover art, and upload dates into media tags. |
+| **SponsorBlock**         | `Off`       | Skips sponsor ads, intros, and outros automatically.                    |
+| **Concurrent fragments** | `8`         | Number of simultaneous network connections for faster downloads.        |
+| **Rate limit**           | `Unlimited` | Throttle maximum download speed to save bandwidth.                      |
+| **Custom flags**         | `-`         | Append arbitrary `yt-dlp` command-line flags.                           |
 
 ### Cookie Authentication
 
-For age-restricted, members-only, or login-required content, export cookies from your browser using the [cookies.txt format](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp) and upload in **Settings → Cookie Authentication**.
+For age-gated, private, or members-only videos, export your browser session cookies using a browser extension (such as *Get cookies.txt* in Netscape format) and upload them under **Settings → Cookie Authentication**. Streamline loads them securely for authorized yt-dlp calls.
 
-### Environment
+### Isolated Environment
 
-If yt-dlp or ffmpeg is not detected, go to **Settings → Environment** and click **Repair** to re-provision all dependencies.
+If any binary is reported missing or becomes corrupted, go to **Settings → Environment** and click **Repair**. This will clean and re-install local Python environments and CLI helpers.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture Design
 
 ```text
 streamline/
-├── server/                  # Bun + Elysia backend
-│   ├── index.js             # Server entry, WebSocket upgrade
-│   ├── routes/              # REST API routes
-│   │   ├── download.js      # Queue management endpoints
-│   │   ├── formats.js       # yt-dlp metadata fetch
-│   │   ├── env.js           # Environment status + repair
-│   │   ├── history.js       # Download history
-│   │   └── cookies.js       # Cookie file management
-│   ├── services/
-│   │   ├── ytdlp.js         # yt-dlp process management + progress parsing
-│   │   ├── queue.js         # Sequential download queue
-│   │   ├── environment.js   # Tool resolution (yt-dlp, ffmpeg, bun)
-│   │   ├── history.js       # Persistent history (JSON file)
-│   │   ├── cookies.js       # Cookie file storage
-│   │   └── temp.js          # Temp directory lifecycle management
+├── server/                  # Bun + Elysia API server
+│   ├── index.js             # Entrypoint & websocket registration
+│   ├── routes/              # Express-like REST controllers
+│   │   ├── download.js      # Queue control and interaction
+│   │   ├── formats.js       # yt-dlp metadata parser
+│   │   ├── env.js           # Sandbox health & repairs
+│   │   ├── history.js       # Download registry
+│   │   └── cookies.js       # Cookie file manager
+│   ├── services/            # Core business logic layer
+│   │   ├── ytdlp.js         # Spawns & monitors yt-dlp sub-processes
+│   │   ├── queue.js         # Sequential download queue pipeline
+│   │   ├── environment.js   # Python venv & dependency provisioner
+│   │   ├── history.js       # JSON history reader/writer
+│   │   ├── cookies.js       # Netscape cookies parser
+│   │   └── temp.js          # Temporary files garbage collector
 │   └── ws/
-│       └── handler.js       # WebSocket client manager + broadcast
+│       └── handler.js       # WebSocket multiplexer & subscriber list
 │
-├── src/                     # React frontend
-│   ├── App.jsx
-│   ├── pages/
-│   │   ├── DownloadPage.jsx
-│   │   ├── HistoryPage.jsx
-│   │   └── SettingsPage.jsx
-│   ├── components/          # All UI components
-│   ├── hooks/
-│   │   ├── useStore.js      # Zustand global state
-│   │   └── useWebSocket.js  # WS client + polling fallback
-│   └── lib/utils.js
+├── src/                     # React Single Page App (Vite)
+│   ├── App.jsx              # App layout shell
+│   ├── pages/               # Route views (Downloads, History, Settings)
+│   ├── components/          # Reusable UI widgets
+│   ├── hooks/               # State hooks (Zustand store & WebSockets)
+│   └── lib/utils.js         # Spacing, formatting, CSS utils
 │
-├── bin/streamline.js        # npx entry point
+├── bin/streamline.js        # Executable binary for npx / global installs
 ├── scripts/
-│   └── provision.js         # yt-dlp + ffmpeg setup
-└── dist/                    # Built frontend (generated)
+│   └── provision.js         # Sandboxed dependency setup script
+└── dist/                    # Static built assets (built via Vite)
 ```
 
-### Data Flow
+### Data Pipeline Overview
 
-```text
-User pastes URL
-  → GET /api/formats → yt-dlp --dump-json → media info displayed
-
-User clicks Download
-  → POST /api/download → DownloadQueue.add()
-  → processNext() → ytdlp.startDownload()
-  → stdout/stderr piped → onProgress / onLog callbacks
-  → queue.emit({ type: 'progress'|'log', ... })
-  → wsManager.broadcast() → WebSocket → useWebSocket.js
-  → Zustand store.updateDownload() / appendLog()
-  → React re-render → progress bar + live logs update
+```
+[User Action: Paste URL] ──> GET /api/formats ──> [yt-dlp --dump-json] ──> Return Media Info
+                                                                                 │
+[User Action: Download] <────────────────────────────────────────────────────────┘
+  │
+  └──> POST /api/download ──> [DownloadQueue.add()] ──> [processNext()]
+                                                               │
+     ┌─────────────────────────────────────────────────────────┘
+     ▼
+[ytdlp.startDownload()] ──> stdout/stderr piped ──> parseProgress()
+                                                        │
+     ┌──────────────────────────────────────────────────┘
+     ▼
+[queue.emit('progress'|'log')] ──> [wsManager.broadcast()] ──> [WebSocket client]
+                                                                        │
+     ┌──────────────────────────────────────────────────────────────────┘
+     ▼
+[Zustand useStore] ──> State Mutation ──> React virtual DOM re-render
 ```
 
 ---
 
-## 🔌 API Reference
+## 🔌 API Reference Guide
 
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/api/formats?url=` | Fetch media metadata and formats |
-| `POST` | `/api/download` | Queue a new download |
-| `GET` | `/api/download/status` | Get current queue state |
-| `DELETE` | `/api/download/:id` | Cancel/remove a download |
-| `POST` | `/api/download/retry` | Retry a failed download |
-| `PATCH` | `/api/download/reorder` | Reorder queue |
-| `POST` | `/api/download/open-folder` | Open file location in OS |
-| `GET` | `/api/history` | Get download history |
-| `DELETE` | `/api/history` | Clear all history |
-| `GET` | `/api/env` | Get environment status |
-| `POST` | `/api/env/repair` | Re-provision dependencies |
-| `WS` | `/ws` | Real-time progress + log events |
+### REST API Endpoints
 
-### WebSocket Events (server → client)
+| HTTP Method | Route path                  | Purpose / Details                                     |
+|:----------- |:--------------------------- |:----------------------------------------------------- |
+| `GET`       | `/api/formats?url=...`      | Fetches parsed video/audio options and metadata.      |
+| `POST`      | `/api/download`             | Appends a URL format selection to the download queue. |
+| `GET`       | `/api/download/status`      | Queries current queue size and status of each item.   |
+| `DELETE`    | `/api/download/:id`         | Cancels an active download or removes a queued item.  |
+| `POST`      | `/api/download/retry`       | Re-queues a previously failed download task.          |
+| `PATCH`     | `/api/download/reorder`     | Update index positions of queued tasks.               |
+| `POST`      | `/api/download/open-folder` | Opens the output folder in OS Finder/Explorer.        |
+| `GET`       | `/api/history`              | Fetches the full download history array.              |
+| `DELETE`    | `/api/history`              | Clears all records from history.json.                 |
+| `GET`       | `/api/env`                  | Checks the status of Python, yt-dlp, and ffmpeg.      |
+| `POST`      | `/api/env/repair`           | Triggers a background environment repair job.         |
+| `WS`        | `/ws`                       | WebSocket route for real-time progress and logs.      |
 
-| Event type | Fields | Description |
-| --- | --- | --- |
-| `started` | `downloadId` | Download process spawned |
-| `progress` | `downloadId, progress, speed, eta, filesize, line` | Progress update |
-| `merging` | `downloadId, line` | ffmpeg merge started |
-| `complete` | `downloadId, filepath, title` | Download finished |
-| `error` | `downloadId, error` | Download failed |
-| `log` | `downloadId, line` | Raw yt-dlp output line |
-| `paused` | `downloadId, progress` | Download paused |
-| `env_status` | `data` | Environment health update |
-| `provision_log` | `line` | Provisioning log line |
-| `provision_done` | `success` | Provisioning complete |
+### WebSocket Payload Spec (Server ──> Client)
 
----
-
-## 🛠️ Troubleshooting
-
-**Downloads stuck at 0%**
-
-- Check **Settings → Environment** — yt-dlp and ffmpeg must both show OK
-- For fragmented videos (YouTube 1080p+), progress updates in chunks — this is normal
-- Open the Live Logs panel to see raw yt-dlp output
-
-**"Sign in to confirm you're not a bot"**
-
-- Upload YouTube cookies in **Settings → Cookie Authentication**
-- Export cookies from a fresh private/incognito YouTube session
-
-**No Live Logs appearing**
-
-- Ensure the WebSocket indicator (bottom of sidebar) shows connected
-- Try refreshing — the WS auto-reconnects with exponential backoff
-
-**yt-dlp binary not found**
-
-- Run repair: **Settings → Environment → Repair**
-- Or manually: `pip install -U yt-dlp`
-
-**ffmpeg not found / merge errors**
-
-- ffmpeg is bundled via npm. Run `bun install` to reinstall
-- Or set a custom path in **Settings → Environment**
+| Event Key        | Payload Properties                                     | When is it sent?                                                |
+|:---------------- |:------------------------------------------------------ |:--------------------------------------------------------------- |
+| `started`        | `{ downloadId }`                                       | When the yt-dlp child process has successfully spawned.         |
+| `progress`       | `{ downloadId, progress, speed, eta, filesize, line }` | Incremental download updates parsed from stdout.                |
+| `merging`        | `{ downloadId, line }`                                 | Sent when ffmpeg begins merging high-quality video and audio.   |
+| `complete`       | `{ downloadId, filepath, title }`                      | File is finalized and moved to the destination folder.          |
+| `error`          | `{ downloadId, error }`                                | The download failed or was interrupted by a subprocess crash.   |
+| `log`            | `{ downloadId, line }`                                 | Raw output lines emitted by yt-dlp (for the Live Logs console). |
+| `paused`         | `{ downloadId, progress }`                             | Task is temporarily paused in the queue.                        |
+| `env_status`     | `{ data }`                                             | Current provisioning status updates.                            |
+| `provision_log`  | `{ line }`                                             | Raw stdout/stderr lines from the provision script.              |
+| `provision_done` | `{ success }`                                          | Sent when environment repair or installation is completed.      |
 
 ---
 
-## 🤝 Contributing
+## 🛠️ Diagnostics & Troubleshooting
 
-Contributions are welcome! Please read the contributing guidelines and open an issue before submitting large PRs.
+#### Downloads are frozen at 0%
+
+- Inspect **Settings → Environment** to ensure all tool status dots are green.
+- Fragmented video files (e.g. YouTube 1080p and higher) require merging separate video and audio tracks. Progress will jump in blocks once segments finish caching.
+- Click the terminal icon next to the downloading item to read raw `yt-dlp` logs.
+
+#### "Sign in to confirm you're not a bot"
+
+- Drop netscape cookies file into **Settings → Cookie Authentication**.
+- Make sure to export cookies while logged out or from an active Private/Incognito browser window.
+
+#### WebSocket is disconnected
+
+- Streamline will automatically try to reconnect with exponential backoff.
+- Check if your server port is occupied or if a browser extension is blocking socket traffic.
+
+#### yt-dlp / ffmpeg is missing
+
+- Open settings and execute **Repair Environment**. Streamline downloads self-contained binaries to your user directory (`~/.streamline/`).
+
+---
+
+## 🤝 Contributing Guidelines
+
+We welcome pull requests and issues! Please follow standard practices:
 
 ```bash
-bun run test          # Run all tests
-bun run test:server   # Server-side tests only
-bun run build         # Production build
+# Run the test suite
+bun run test
+
+# Run server-side unit tests
+bun run test:server
+
+# Build production client bundle
+bun run build
 ```
 
 ---
 
 ## 📄 License
 
-MIT © FlameonLabs
+Licensed under the [MIT License](LICENSE) © [FlameonLabs](https://flameonlabs.com).
 
----
+<br />
 
-<div align="center">Made with ♥ by <a href="https://flameonlabs.com">FlameonLabs</a></div>
+<div align="center">
+  <sub>Made with ♥ by <a href="https://flameonlabs.com">FlameonLabs</a></sub>
+</div>
+
+

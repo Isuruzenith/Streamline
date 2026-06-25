@@ -69,14 +69,27 @@ export default function QueuePanel() {
     <div className="animate-slide-up">
       <div className="sl-section-label">Queue</div>
       {downloads.length > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-mono text-text-dim">
-          <span>
-            {"\u2193"} {downloadingCount} active {"\u00b7"} {queuedCount} queued {"\u00b7"} {"\u2713"} {completedCount} done
-          </span>
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-mono">
+          {downloadingCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-status-blue-bg text-status-blue border border-status-blue/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-status-blue animate-pulse" />
+              {downloadingCount} active
+            </span>
+          )}
+          {queuedCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface text-text-dim border border-border">
+              {queuedCount} queued
+            </span>
+          )}
+          {completedCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-status-green-bg text-status-green border border-status-green/20">
+              {completedCount} done
+            </span>
+          )}
           {completedCount > 0 && (
             <button
               onClick={clearCompleted}
-              className="ml-auto text-text-dim hover:text-accent transition-colors"
+              className="ml-auto text-text-dim hover:text-accent transition-colors text-xs font-mono"
             >
               Clear completed
             </button>
@@ -84,11 +97,11 @@ export default function QueuePanel() {
         </div>
       )}
       {downloads.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center gap-3 border border-border rounded-md bg-surface">
-          <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center border border-border">
-            <Download size={16} className="text-text-dim" />
+        <div className="flex flex-col items-center justify-center py-14 text-center gap-3 border-2 border-dashed border-border rounded-md bg-surface/50 hover:border-border-accent transition-colors">
+          <div className="w-11 h-11 rounded-full bg-surface flex items-center justify-center border border-border">
+            <Download size={17} className="text-text-dim" />
           </div>
-          <p className="text-sm text-text-dim">No downloads yet</p>
+          <p className="text-sm text-text-muted font-medium">No downloads yet</p>
           <p className="text-xs text-text-dim opacity-60">Paste a URL above to get started</p>
         </div>
       ) : (
@@ -168,8 +181,10 @@ function QueueItem({
         "flex items-start gap-3 p-3.5 rounded-md border transition-all duration-150",
         "bg-surface border-border",
         isDragging && "opacity-40",
-        isDragOver && "border-border-accent bg-accent-glow"
+        isDragOver && "border-border-accent bg-accent-glow",
+        isActive && "bg-accent-glow/30"
       )}
+      style={{ animation: "slideInRight 250ms ease-out" }}
     >
       {/* Drag handle (only for queued items) */}
       {isQueued ? (

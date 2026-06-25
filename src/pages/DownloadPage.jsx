@@ -6,7 +6,6 @@ import FormatPicker from "@/components/FormatPicker";
 import DownloadButton from "@/components/DownloadButton";
 import PlaylistPanel from "@/components/PlaylistPanel";
 import QueuePanel from "@/components/QueuePanel";
-import LiveLogs from "@/components/LiveLogs";
 import DownloadOptions from "@/components/DownloadOptions";
 import useStore from "@/hooks/useStore";
 
@@ -26,8 +25,8 @@ export default function DownloadPage() {
   }, [downloads.length]);
 
   return (
-    <div>
-      <div className="mb-8">
+    <div className="space-y-6">
+      <div>
         <div className="flex items-center gap-3 mb-1">
           <Download size={18} className="text-accent" />
           <h1 className="text-2xl font-bold text-text-primary font-serif tracking-tight">
@@ -37,52 +36,39 @@ export default function DownloadPage() {
         <p className="text-sm text-text-dim ml-[30px]">
           Paste any URL - supports 1000+ platforms
         </p>
-        <div className="h-px bg-border mt-4" />
+        <div className="sl-divider-gradient mt-4" />
       </div>
 
-      <div className={`grid gap-6 ${showDownloadControls ? "xl:grid-cols-[minmax(0,1fr)_430px]" : "xl:grid-cols-1"}`}>
+      <div className="space-y-6">
         <div className="min-w-0">
-          <div className="mb-6">
-            <URLInput />
+          <URLInput />
+        </div>
+
+        {isPlaylist && (
+          <div className="min-w-0">
+            <PlaylistPanel />
           </div>
+        )}
 
-          {isPlaylist && (
-            <div className="mb-6">
-              <PlaylistPanel />
-            </div>
-          )}
-
-          {mediaInfo && !isPlaylist && (
-            <div className="mb-6">
+        {mediaInfo && !isPlaylist && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Column 1: Video Preview */}
+            <div className="lg:col-span-7 xl:col-span-8 min-w-0">
               <MediaPreview />
             </div>
-          )}
 
-          <div ref={queueRef} className="mb-6 scroll-mt-8">
-            <QueuePanel />
+            {/* Column 2: Format selection, Options, & Download Button */}
+            <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-6 min-w-0">
+              <FormatPicker />
+              <DownloadOptions />
+              <DownloadButton />
+            </div>
           </div>
-
-          {!showDownloadControls && <LiveLogs />}
-        </div>
-
-        {showDownloadControls && (
-        <div className="min-w-0">
-          {showDownloadControls && (
-            <>
-              <div className="mb-6">
-                <FormatPicker />
-              </div>
-              <div className="mb-6">
-                <DownloadOptions />
-              </div>
-              <div className="mb-6">
-                <DownloadButton />
-              </div>
-            </>
-          )}
-          <LiveLogs />
-        </div>
         )}
+
+        <div ref={queueRef} className="scroll-mt-8 min-w-0">
+          <QueuePanel />
+        </div>
       </div>
     </div>
   );
