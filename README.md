@@ -1,6 +1,16 @@
 <div align="center">
   <a href="https://github.com/flameonlabs/streamline">
-    <img src="public/favicon.svg" alt="Streamline Logo" width="96" height="96" style="margin-bottom: 20px;" />
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" width="96" height="96" style="margin-bottom: 20px;">
+      <rect width="64" height="64" rx="16" fill="#171615"/>
+      <path d="M32 12 C25 20, 19 28, 19 37 C19 45, 25 52, 32 52 C39 52, 45 45, 45 37 C45 31, 42 25, 38 19"
+            stroke="#D66F45" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M32 22 C28.5 27, 26 31.5, 26 37 C26 41.5, 28.5 45.5, 32 45.5 C35.5 45.5, 38 41.5, 38 37 C38 33.5, 36.5 30, 35 27"
+            stroke="#E8A07D" stroke-width="3.25" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="22" y1="37" x2="42" y2="37" stroke="#FAF7EF" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="32" y1="37" x2="32" y2="48" stroke="#FAF7EF" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="32" cy="37" r="3.5" fill="#D66F45"/>
+      <circle cx="32" cy="37" r="1.7" fill="#FAF7EF"/>
+    </svg>
   </a>
 
 # Streamline
@@ -42,36 +52,58 @@
 
 ### Prerequisites
 
-Streamline manages its own isolated dependencies (Python, yt-dlp, and ffmpeg) on the first start. You only need a few base tools:
+Streamline manages its own isolated dependencies (Python, yt-dlp, and ffmpeg) automatically on the first start. You only need a few base tools:
 
 | Requirement               | Supported Version | Role in Streamline                                                            |
 |:------------------------- |:----------------- |:----------------------------------------------------------------------------- |
 | **[Bun](https://bun.sh)** | `>= 1.1`          | Recommended high-performance JS runtime & package manager                     |
 | **Python**                | `>= 3.9`          | Required backend parser tool for running `yt-dlp` subprocesses                |
 | **yt-dlp**                | `latest`          | Auto-installed and self-updated inside the app's isolated virtual environment |
-| **ffmpeg**                | `bundled`         | Auto-installed via npm wrapper to handle stream merges and conversions        |
+| **ffmpeg**                | `bundled`         | Auto-downloaded during provisioning to handle stream merges and conversions  |
 
 ### Install & Run
 
-You can run Streamline instantly without a manual clone, or install it globally as a command-line tool.
+You can run Streamline instantly without a manual clone, or install it globally on your system.
 
 > [!NOTE]
-> Make sure to use the correct **`streamline-md`** package name on npm.
+> Make sure to use the correct **`streamline-md`** package name.
 
+#### Run instantly (No install needed)
 ```bash
-# Option A: Run instantly via npx
 npx streamline-md
+```
 
-# Option B: Install globally using Bun
+#### Option A: Install globally via Bun
+```bash
 bun add -g streamline-md
+```
+```bash
 streamline-md
+```
 
-# Option C: Install globally using npm
+#### Option B: Install globally via npm
+```bash
 npm install -g streamline-md
+```
+```bash
 streamline-md
 ```
 
 Once started, the application will automatically launch your default browser and open at **[http://localhost:7979](http://localhost:7979)**.
+
+### 🧹 Uninstalling
+
+If you ever need to clean up and remove the global installation:
+
+#### Remove via npm
+```bash
+npm uninstall -g streamline-md
+```
+
+#### Remove via Bun
+```bash
+bun remove -g streamline-md
+```
 
 ### Development Setup
 

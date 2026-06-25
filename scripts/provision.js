@@ -15,7 +15,7 @@
 
 import { homedir } from "os";
 import { join, basename } from "path";
-import { chmodSync, existsSync, mkdirSync, readdirSync, writeFileSync } from "fs";
+import { chmodSync, existsSync, mkdirSync, readdirSync, writeFileSync, createWriteStream } from "fs";
 
 const STREAMLINE_DIR = join(homedir(), ".streamline");
 const PYTHON_DIR = join(STREAMLINE_DIR, "python");
@@ -31,6 +31,54 @@ const cyan = (s) => `\x1b[36m${s}\x1b[0m`;
 
 function log(icon, msg) {
   console.log(`${icon} ${msg}`);
+}
+
+/**
+ * Downloads a file from a URL and saves it to destPath, showing a live TUI progress bar.
+ */
+async function downloadWithProgress(url, destPath, label = "Downloading") {
+  const resp = await fetch(url, { redirect: "follow" });
+  if (!resp.ok) {
+    throw new Error(`Failed to download: HTTP ${resp.status}`);
+  }
+
+  const contentLength = parseInt(resp.headers.get("content-length") || "0", 10);
+  const fileStream = createWriteStream(destPath);
+  
+  if (!resp.body) {
+    throw new Error("Response body is not readable");
+  }
+
+  const reader = resp.body.getReader();
+  let downloadedBytes = 0;
+  const barWidth = 30;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      if (value) {
+        fileStream.write(Buffer.from(value));
+        downloadedBytes += value.length;
+
+        if (contentLength > 0) {
+          const pct = (downloadedBytes / contentLength) * 100;
+          const filledWidth = Math.round((downloadedBytes / contentLength) * barWidth);
+          const bar = "█".repeat(filledWidth) + "░".repeat(barWidth - filledWidth);
+          const downloadedMB = (downloadedBytes / 1024 / 1024).toFixed(1);
+          const totalMB = (contentLength / 1024 / 1024).toFixed(1);
+          process.stdout.write(`\r  → ${label}: [${bar}] ${pct.toFixed(0)}% (${downloadedMB}/${totalMB} MB)`);
+        } else {
+          const downloadedMB = (downloadedBytes / 1024 / 1024).toFixed(1);
+          process.stdout.write(`\r  → ${label}: ${downloadedMB} MB`);
+        }
+      }
+    }
+  } finally {
+    await new Promise((resolve) => fileStream.end(resolve));
+  }
+  process.stdout.write("\n");
 }
 
 /**
@@ -182,12 +230,8 @@ async function downloadFfmpegTools() {
       ["ffprobe", info.ffprobeUrl, ffprobeDest],
     ]) {
       log(dim("  ->"), `Downloading ${name}...`);
-      const resp = await fetch(url, { redirect: "follow" });
-      if (!resp.ok) throw new Error(`Failed to download ${name}: HTTP ${resp.status}`);
-
       const zipPath = join(STREAMLINE_DIR, `${name}.zip`);
-      const buf = await resp.arrayBuffer();
-      writeFileSync(zipPath, Buffer.from(buf));
+      await downloadWithProgress(url, zipPath, `Downloading ${name}`);
 
       // Extract — macOS zip contains just the binary at root level
       const tmpDir = join(STREAMLINE_DIR, `${name}_tmp`);
@@ -215,14 +259,9 @@ async function downloadFfmpegTools() {
   // Windows / Linux: download single archive containing both binaries
   log(dim("  ->"), dim(info.url));
 
-  const resp = await fetch(info.url, { redirect: "follow" });
-  if (!resp.ok) throw new Error(`Failed to download ffmpeg: HTTP ${resp.status}`);
-
   const archiveName = info.archiveType === "zip" ? "ffmpeg-archive.zip" : "ffmpeg-archive.tar.xz";
   const archivePath = join(STREAMLINE_DIR, archiveName);
-  const buf = await resp.arrayBuffer();
-  writeFileSync(archivePath, Buffer.from(buf));
-  log(dim("  →"), `Downloaded ${(buf.byteLength / 1024 / 1024).toFixed(1)}MB`);
+  await downloadWithProgress(info.url, archivePath, "Downloading ffmpeg package");
 
   // Extract to temp dir
   const extractDir = join(STREAMLINE_DIR, "ffmpeg_extract");
@@ -347,25 +386,17 @@ async function main() {
   if (existsSync(pythonBin)) {
     log(green("OK"), `Python already installed at ${dim(pythonBin)}`);
   } else {
-    log(dim(">"), "Downloading Python 3.11.10 (python-build-standalone)...");
-
-
+    log(dim("▸"), "Downloading isolated Python 3.11.10 environment...");
+    log(dim("  ℹ"), "Why? Streamline needs an isolated Python environment to run yt-dlp securely.");
 
     try {
       const url = getPBSUrl();
-      log(dim("  ->"), dim(url));
+      log(dim("  →"), dim(url));
       mkdirSync(PYTHON_DIR, { recursive: true });
 
       // Download
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Download failed: HTTP ${response.status}`);
-      }
-
       const tarPath = join(STREAMLINE_DIR, "python.tar.gz");
-      const buffer = await response.arrayBuffer();
-      writeFileSync(tarPath, Buffer.from(buffer));
-      log(dim("  →"), `Downloaded ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB`);
+      await downloadWithProgress(url, tarPath, "Downloading Python");
 
       // Extract
       log(dim("▸"), "Extracting...");
@@ -412,7 +443,8 @@ async function main() {
   const pipBin = getVenvPipBin();
 
   if (existsSync(pipBin)) {
-    log(dim("▸"), "Installing yt-dlp with browser/cookie support...");
+    log(dim("▸"), "Installing/updating yt-dlp (media downloader engine)...");
+    log(dim("  ℹ"), "Why? yt-dlp extracts media from YouTube and 1000+ other supported websites.");
     try {
       await run(pipBin, ["install", "--upgrade", "yt-dlp[default,curl-cffi]"]);
       const version = await runCapture(
@@ -446,6 +478,7 @@ async function main() {
     };
   } else {
     log(dim("▸"), "Downloading ffmpeg and ffprobe...");
+    log(dim("  ℹ"), "Why? Required to merge high-quality video & audio tracks and convert formats.");
     try {
       ffmpegTools = await downloadFfmpegTools();
       log(green("✓"), `ffmpeg and ffprobe installed at ${dim(FFMPEG_DIR)}`);
