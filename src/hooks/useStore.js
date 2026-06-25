@@ -19,6 +19,10 @@ const DEFAULT_DOWNLOAD_OPTIONS = {
   rateLimit: "",
   concurrentFragments: 8,
   customFlags: "",
+  concurrencyLimit: 1,
+  trimVideo: false,
+  trimStart: "",
+  trimEnd: "",
 };
 
 const UNCHECKED_DOWNLOAD_OPTIONS = {
@@ -28,6 +32,7 @@ const UNCHECKED_DOWNLOAD_OPTIONS = {
   embedMetadata: false,
   sponsorBlock: false,
   downloadArchive: false,
+  trimVideo: false,
 };
 
 function readPersistedSettings() {

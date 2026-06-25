@@ -1,110 +1,126 @@
 import { join } from "path";
 import { homedir } from "os";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
+import { mkdirSync } from "fs";
+import { Database } from "bun:sqlite";
 
 const STREAMLINE_DIR = join(homedir(), ".streamline");
-const HISTORY_FILE = join(STREAMLINE_DIR, "history.json");
+const DB_FILE = join(STREAMLINE_DIR, "streamline.db");
 const MAX_ENTRIES = 200;
 
 /**
- * Persistent download history stored as JSON on disk.
+ * Persistent download history stored in SQLite on disk.
  * Each entry: { id, url, title, thumbnail, filepath, filesize, status, completedAt }
  */
 class HistoryService {
   constructor() {
-    this._cache = null;
-  }
-
-  /**
-   * Load history from disk (cached after first read).
-   */
-  _load() {
-    if (this._cache) return this._cache;
-    try {
-      if (existsSync(HISTORY_FILE)) {
-        this._cache = JSON.parse(readFileSync(HISTORY_FILE, "utf-8"));
-        return this._cache;
-      }
-    } catch {
-      // corrupted file — start fresh
-    }
-    this._cache = [];
-    return this._cache;
-  }
-
-  /**
-   * Persist current cache to disk.
-   */
-  _save() {
     try {
       mkdirSync(STREAMLINE_DIR, { recursive: true });
-      writeFileSync(HISTORY_FILE, JSON.stringify(this._cache, null, 2));
+      this.db = new Database(DB_FILE);
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS history (
+          id TEXT PRIMARY KEY,
+          url TEXT,
+          title TEXT,
+          thumbnail TEXT,
+          filepath TEXT,
+          filesize INTEGER,
+          status TEXT,
+          completedAt TEXT
+        )
+      `);
     } catch (err) {
-      console.error("[history] Failed to save:", err.message);
+      console.error("[history] Failed to initialize SQLite database:", err.message);
     }
   }
 
   /**
-   * Add a completed download to history.
+   * Add a completed/failed download to history.
    */
   add({ downloadId, url, title, thumbnail, filepath, filesize, status }) {
-    const entries = this._load();
+    if (!this.db) return;
 
-    // Avoid duplicates
-    const existing = entries.findIndex((e) => e.id === downloadId);
-    if (existing !== -1) {
-      entries[existing] = {
-        ...entries[existing],
-        filepath,
-        filesize,
-        status,
-        completedAt: new Date().toISOString(),
-      };
-    } else {
-      entries.unshift({
-        id: downloadId,
-        url,
-        title: title || "Untitled",
-        thumbnail: thumbnail || null,
-        filepath: filepath || null,
-        filesize: filesize || null,
-        status: status || "complete",
-        completedAt: new Date().toISOString(),
-      });
+    try {
+      const existing = this.db.prepare("SELECT 1 FROM history WHERE id = ?").get(downloadId);
+
+      if (existing) {
+        this.db.prepare(`
+          UPDATE history 
+          SET filepath = ?, filesize = ?, status = ?, completedAt = ? 
+          WHERE id = ?
+        `).run(
+          filepath || null,
+          filesize || null,
+          status || "complete",
+          new Date().toISOString(),
+          downloadId
+        );
+      } else {
+        this.db.prepare(`
+          INSERT INTO history (id, url, title, thumbnail, filepath, filesize, status, completedAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          downloadId,
+          url || null,
+          title || "Untitled",
+          thumbnail || null,
+          filepath || null,
+          filesize || null,
+          status || "complete",
+          new Date().toISOString()
+        );
+      }
+
+      // Trim to MAX_ENTRIES
+      this.db.prepare(`
+        DELETE FROM history 
+        WHERE id NOT IN (
+          SELECT id FROM history 
+          ORDER BY completedAt DESC 
+          LIMIT ?
+        )
+      `).run(MAX_ENTRIES);
+    } catch (err) {
+      console.error("[history] Failed to add entry:", err.message);
     }
-
-    // Trim to max
-    if (entries.length > MAX_ENTRIES) {
-      entries.length = MAX_ENTRIES;
-    }
-
-    this._cache = entries;
-    this._save();
   }
 
   /**
    * Get all history entries.
    */
   list() {
-    return this._load();
+    if (!this.db) return [];
+    try {
+      return this.db.prepare("SELECT * FROM history ORDER BY completedAt DESC").all();
+    } catch (err) {
+      console.error("[history] Failed to list entries:", err.message);
+      return [];
+    }
   }
 
   /**
    * Remove a single entry by ID.
    */
   remove(id) {
-    const entries = this._load();
-    this._cache = entries.filter((e) => e.id !== id);
-    this._save();
+    if (!this.db) return;
+    try {
+      this.db.prepare("DELETE FROM history WHERE id = ?").run(id);
+    } catch (err) {
+      console.error("[history] Failed to remove entry:", err.message);
+    }
   }
 
   /**
    * Clear all history.
    */
   clear() {
-    this._cache = [];
-    this._save();
+    if (!this.db) return;
+    try {
+      this.db.prepare("DELETE FROM history").run();
+    } catch (err) {
+      console.error("[history] Failed to clear history:", err.message);
+    }
   }
 }
 
 export const historyService = new HistoryService();
+

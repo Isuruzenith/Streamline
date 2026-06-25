@@ -168,6 +168,45 @@ export default function DownloadOptions() {
 
         <OptionRow
           icon={Scissors}
+          title="Trim / Cut Video"
+          control={
+            <input
+              type="checkbox"
+              checked={options.trimVideo}
+              onChange={set("trimVideo")}
+              className="h-4 w-4 accent-accent"
+            />
+          }
+        >
+          {options.trimVideo && (
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <div>
+                <label className="block text-2xs text-text-dim mb-1 font-mono">Start (e.g. 00:01:15)</label>
+                <input
+                  className="sl-input py-2 text-sm w-full font-mono"
+                  value={options.trimStart || ""}
+                  onChange={set("trimStart")}
+                  placeholder="00:00:00"
+                />
+              </div>
+              <div>
+                <label className="block text-2xs text-text-dim mb-1 font-mono">End (e.g. 00:02:45)</label>
+                <input
+                  className="sl-input py-2 text-sm w-full font-mono"
+                  value={options.trimEnd || ""}
+                  onChange={set("trimEnd")}
+                  placeholder="00:00:00"
+                />
+              </div>
+              <p className="col-span-2 text-xs text-text-dim mt-1">
+                Downloads only the specified duration range of the video. Format: <code>hh:mm:ss</code> or seconds (e.g. <code>95</code>).
+              </p>
+            </div>
+          )}
+        </OptionRow>
+
+        <OptionRow
+          icon={Scissors}
           title="SponsorBlock"
           control={
             <input

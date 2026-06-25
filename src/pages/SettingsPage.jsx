@@ -269,6 +269,21 @@ export default function SettingsPage() {
             <p className="sl-hint">Throttle yt-dlp download bandwidth. 0 means unlimited.</p>
           </div>
 
+          <div className="space-y-1">
+            <label className="sl-label">Concurrent downloads</label>
+            <input
+              type="number"
+              min="1"
+              max="4"
+              value={downloadOptions.concurrencyLimit || 1}
+              onChange={(e) =>
+                updateDownloadOption("concurrencyLimit", Math.max(1, Math.min(4, parseInt(e.target.value, 10) || 1)))
+              }
+              className="sl-input w-28 tabular-nums"
+            />
+            <p className="sl-hint">Number of files to download at the same time (1 to 4).</p>
+          </div>
+
           {/* Filename template */}
           <div>
             <label className="block text-sm font-semibold text-text-secondary font-serif mb-2">

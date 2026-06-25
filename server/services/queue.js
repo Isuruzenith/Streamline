@@ -10,17 +10,30 @@ import {
 } from "./temp.js";
 
 /**
- * Sequential download queue.
- * Processes one download at a time, notifies via callbacks.
+ * Concurrently-enabled download queue.
+ * Processes multiple downloads up to a configurable concurrency limit.
  */
 export class DownloadQueue {
   constructor() {
     this.queue = []; // pending jobs
-    this.active = null; // currently downloading
+    this.activeJobs = new Map(); // downloadId -> active job
     this.completed = []; // completed/failed (in-memory recent)
     this.pausedJobs = new Map(); // downloadId -> job snapshot
     this.listeners = new Set();
-    this.processing = false;
+    this.concurrencyLimit = 1;
+  }
+
+  get active() {
+    return this.activeJobs.size > 0 ? this.activeJobs.values().next().value : null;
+  }
+
+  set active(val) {
+    if (!val) {
+      const firstKey = this.activeJobs.keys().next().value;
+      if (firstKey) this.activeJobs.delete(firstKey);
+    } else {
+      this.activeJobs.set(val.downloadId, val);
+    }
   }
 
   /**
@@ -49,7 +62,7 @@ export class DownloadQueue {
 
   hasDownloadId(downloadId) {
     return (
-      this.active?.downloadId === downloadId ||
+      this.activeJobs.has(downloadId) ||
       this.queue.some((job) => job.downloadId === downloadId) ||
       this.pausedJobs.has(downloadId) ||
       this.completed.some((job) => job.downloadId === downloadId)
@@ -80,6 +93,10 @@ export class DownloadQueue {
       throw new Error(`Duplicate downloadId: ${downloadId}`);
     }
 
+    if (options && options.concurrencyLimit) {
+      this.concurrencyLimit = Math.max(1, Math.min(parseInt(options.concurrencyLimit, 10) || 1, 4));
+    }
+
     const job = {
       downloadId,
       url,
@@ -105,10 +122,10 @@ export class DownloadQueue {
       type: "queue_update",
       downloadId,
       position: this.queue.length,
-      total: this.queue.length + (this.active ? 1 : 0),
+      total: this.queue.length + this.activeJobs.size,
     });
 
-    // Start processing if not already
+    // Start processing if not already at concurrency limit
     this.processNext();
 
     return {
@@ -134,31 +151,31 @@ export class DownloadQueue {
    * Cancel the active download.
    */
   cancel(downloadId) {
-    if (this.active && this.active.downloadId === downloadId) {
-      const progress = this.active.progress || 0;
+    const activeJob = this.activeJobs.get(downloadId);
+    if (activeJob) {
+      const progress = activeJob.progress || 0;
       const shouldPause = progress > 5;
-      this.active.status = shouldPause ? "paused" : "cancelled";
+      activeJob.status = shouldPause ? "paused" : "cancelled";
 
-      if (this.active.controller) {
-        this.active.controller.kill();
+      if (activeJob.controller) {
+        activeJob.controller.kill();
       }
-      markDownloadTempComplete(this.active.tempPath);
+      markDownloadTempComplete(activeJob.tempPath);
 
       if (shouldPause) {
         this.pausedJobs.set(downloadId, {
-          ...this.active,
+          ...activeJob,
           status: "paused",
           pausedAt: Date.now(),
           controller: null,
         });
         this.emit({ type: "paused", downloadId, progress });
       } else {
-        this.pushCompleted(this.active);
+        this.pushCompleted(activeJob);
         this.emit({ type: "error", downloadId, error: "Download cancelled by user" });
       }
 
-      this.active = null;
-      this.processing = false;
+      this.activeJobs.delete(downloadId);
 
       setTimeout(() => this.processNext(), 0);
       return true;
@@ -185,7 +202,7 @@ export class DownloadQueue {
       type: "queue_update",
       downloadId,
       position: 1,
-      total: this.queue.length + (this.active ? 1 : 0),
+      total: this.queue.length + this.activeJobs.size,
     });
     this.processNext();
     return true;
@@ -224,7 +241,7 @@ export class DownloadQueue {
       type: "queue_update",
       downloadId,
       position: 1,
-      total: this.queue.length + (this.active ? 1 : 0),
+      total: this.queue.length + this.activeJobs.size,
     });
     this.processNext();
     return true;
@@ -252,25 +269,30 @@ export class DownloadQueue {
    * Process the next item in the queue.
    */
   async processNext() {
-    if (this.processing || this.queue.length === 0) return;
+    if (this.activeJobs.size >= this.concurrencyLimit || this.queue.length === 0) return;
 
-    this.processing = true;
     const job = this.queue.shift();
-    this.active = job;
-    this.active.status = "queued";
-    this.active.progress = this.active.progress ?? 0;
-    this.active.speed = this.active.speed ?? null;
-    this.active.eta = this.active.eta ?? null;
+    if (!job) return;
+
+    this.activeJobs.set(job.downloadId, job);
+    job.status = "queued";
+    job.progress = job.progress ?? 0;
+    job.speed = job.speed ?? null;
+    job.eta = job.eta ?? null;
     if (job.tempPath) {
       markDownloadTempActive(job.tempPath);
     } else {
       job.tempPath = createDownloadTempDir(job.downloadId, job.outputPath);
     }
 
+    // Schedule next if we still have concurrency slots free
+    if (this.activeJobs.size < this.concurrencyLimit && this.queue.length > 0) {
+      setTimeout(() => this.processNext(), 50);
+    }
+
     let controller;
     const finishCurrent = () => {
-      this.active = null;
-      this.processing = false;
+      this.activeJobs.delete(job.downloadId);
       if (this.queue.length > 0) setTimeout(() => this.processNext(), 0);
     };
 
@@ -286,9 +308,10 @@ export class DownloadQueue {
         options: job.options,
 
         onStart: () => {
-          if (this.active?.downloadId === job.downloadId) {
-            this.active.status = "downloading";
-            this.active.progress = this.active.progress || 0;
+          const activeJob = this.activeJobs.get(job.downloadId);
+          if (activeJob) {
+            activeJob.status = "downloading";
+            activeJob.progress = activeJob.progress || 0;
           }
           this.emit({
             type: "started",
@@ -297,17 +320,18 @@ export class DownloadQueue {
         },
 
         onProgress: (data) => {
-          if (this.active?.downloadId === job.downloadId) {
-            this.active.status = "downloading";
-            this.active.progress = data.progress ?? this.active.progress ?? 0;
-            this.active.speed = data.speed ?? null;
-            this.active.eta = data.eta ?? null;
-            this.active.filesize = data.filesize ?? this.active.filesize ?? null;
+          const activeJob = this.activeJobs.get(job.downloadId);
+          if (activeJob) {
+            activeJob.status = "downloading";
+            activeJob.progress = data.progress ?? activeJob.progress ?? 0;
+            activeJob.speed = data.speed ?? null;
+            activeJob.eta = data.eta ?? null;
+            activeJob.filesize = data.filesize ?? activeJob.filesize ?? null;
           }
           this.emit({
             type: "progress",
             downloadId: job.downloadId,
-            progress: data.progress ?? this.active?.progress ?? 0,
+            progress: data.progress ?? activeJob?.progress ?? 0,
             speed: data.speed ?? null,
             eta: data.eta ?? null,
             filesize: data.filesize ?? null,
@@ -315,8 +339,9 @@ export class DownloadQueue {
         },
 
         onMerging: () => {
-          if (this.active?.downloadId === job.downloadId) {
-            this.active.status = "merging";
+          const activeJob = this.activeJobs.get(job.downloadId);
+          if (activeJob) {
+            activeJob.status = "merging";
           }
           this.emit({
             type: "merging",
@@ -398,7 +423,10 @@ export class DownloadQueue {
       return;
     }
 
-    this.active.controller = controller;
+    const activeJob = this.activeJobs.get(job.downloadId);
+    if (activeJob) {
+      activeJob.controller = controller;
+    }
   }
 
   /**
@@ -427,6 +455,17 @@ export class DownloadQueue {
             filesize: this.active.filesize ?? null,
           }
         : null,
+      activeJobs: [...this.activeJobs.values()].map((job) => ({
+        downloadId: job.downloadId,
+        url: job.url,
+        title: job.title,
+        thumbnail: job.thumbnail,
+        status: job.status ?? "downloading",
+        progress: job.progress ?? 0,
+        speed: job.speed ?? null,
+        eta: job.eta ?? null,
+        filesize: job.filesize ?? null,
+      })),
       queue,
       queued: queue,
       completed: this.completed.slice(-20).map((h) => ({
@@ -451,3 +490,4 @@ export class DownloadQueue {
 
 // Singleton
 export const downloadQueue = new DownloadQueue();
+

@@ -47,9 +47,9 @@ export default function useWebSocket() {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     let host = window.location.host;
 
-    // In development, the backend runs on port 7979 while the frontend runs on 5173 (Vite)
-    if (host.includes(":5173")) {
-      host = host.replace(":5173", ":7979");
+    // In development, the backend runs on port 7979 while the frontend runs on 5200 (Vite)
+    if (host.includes(":5200")) {
+      host = host.replace(":5200", ":7979");
     }
 
     const url = `${protocol}//${host}/ws`;

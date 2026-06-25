@@ -26,7 +26,7 @@
   },
   "scripts": {
     "dev": "concurrently -n fe,be -c cyan,green \"bun run dev:frontend\" \"bun run dev:backend\"",
-    "dev:frontend": "vite --port 5173",
+    "dev:frontend": "vite --port 5200",
     "dev:backend": "bun --watch server/index.js",
     "build": "vite build",
     "ci": "bun run build",

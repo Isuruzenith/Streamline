@@ -704,6 +704,13 @@ export function startDownload({
     args.push("--sponsorblock-remove", "all");
   }
 
+  if (options.trimVideo && (options.trimStart || options.trimEnd)) {
+    const start = options.trimStart?.trim() || "0";
+    const end = options.trimEnd?.trim() || "inf";
+    args.push("--download-sections", `*${start}-${end}`);
+    args.push("--force-keyframes-at-cuts");
+  }
+
   if (options.downloadArchive) {
     const streamlineDir = join(homedir(), ".streamline");
     mkdirSync(streamlineDir, { recursive: true });
