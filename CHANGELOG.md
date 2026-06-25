@@ -3,6 +3,13 @@
 All notable changes to Streamline are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.5.0](https://github.com/Isuruzenith/Streamline/compare/v1.4.0...v1.5.0) (2026-06-25)
+
+
+### Features
+
+* implement Elysia backend server with static frontend serving and build preparation ([bb4b0ef](https://github.com/Isuruzenith/Streamline/commit/bb4b0ef701bc424ca15eec9973fc0dff0f956099))
+
 ## [1.4.0](https://github.com/Isuruzenith/Streamline/compare/v1.3.1...v1.4.0) (2026-06-25)
 
 
