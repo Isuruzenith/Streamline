@@ -117,12 +117,14 @@ const useStore = create((set, get) => ({
   settingsTab: "general", // "general" | "environment"
   sidebarCollapsed: false,
   batchMode: false,
+  logsCollapsed: false,
   theme: initialTheme,
 
   setActivePage: (page) => set({ activePage: page }),
   setSettingsTab: (tab) => set({ settingsTab: tab }),
   setBatchMode: (batchMode) => set({ batchMode }),
   toggleBatchMode: () => set((s) => ({ batchMode: !s.batchMode })),
+  setLogsCollapsed: (collapsed) => set({ logsCollapsed: collapsed }),
   setTheme: (theme) => {
     if (typeof document !== "undefined") {
       document.documentElement.setAttribute("data-theme", theme);

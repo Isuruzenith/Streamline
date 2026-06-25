@@ -6,7 +6,6 @@ import FormatPicker from "@/components/FormatPicker";
 import DownloadButton from "@/components/DownloadButton";
 import PlaylistPanel from "@/components/PlaylistPanel";
 import QueuePanel from "@/components/QueuePanel";
-import LiveLogs from "@/components/LiveLogs";
 import DownloadOptions from "@/components/DownloadOptions";
 import useStore from "@/hooks/useStore";
 
@@ -69,10 +68,6 @@ export default function DownloadPage() {
 
         <div ref={queueRef} className="scroll-mt-8 min-w-0">
           <QueuePanel />
-        </div>
-
-        <div className="min-w-0">
-          <LiveLogs />
         </div>
       </div>
     </div>

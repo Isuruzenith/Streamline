@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Link2, Clipboard, Loader2, X, Rows3, Plus, ClipboardCheck } from "lucide-react";
+import { Link2, Clipboard, Loader2, X, Rows3, Plus, ClipboardCheck, ArrowRight } from "lucide-react";
 import useStore from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
 
@@ -167,9 +167,10 @@ export default function URLInput() {
 
   const detectedUrls = parseBatchUrls(batchInput);
   const hasInput = batchMode ? batchInput.trim().length > 0 : inputValue.trim().length > 0;
+  const showGoButton = !batchMode && hasInput && isValidUrl(inputValue) && !mediaLoading;
 
   const renderActionButtons = () => (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1.5">
       {hasInput && (
         <button
           type="button"
@@ -180,36 +181,61 @@ export default function URLInput() {
           <X size={14} />
         </button>
       )}
-      <button
-        type="button"
-        onClick={handlePasteButton}
-        className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono",
-          "text-text-dim hover:text-accent hover:bg-accent-soft",
-          "border border-border hover:border-border-accent",
-          "transition-all duration-150"
-        )}
-      >
-        <Clipboard size={12} />
-        Paste
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          setValidationError(null);
-          setBatchMode(!batchMode);
-        }}
-        className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono",
-          "border transition-all duration-150",
-          batchMode
-            ? "text-accent bg-accent-soft border-border-accent"
-            : "text-text-dim hover:text-accent hover:bg-accent-soft border-border hover:border-border-accent"
-        )}
-      >
-        <Rows3 size={12} />
-        Batch
-      </button>
+
+      {showGoButton ? (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setValidationError(null);
+              setBatchMode(!batchMode);
+            }}
+            className="flex items-center justify-center p-1.5 rounded text-text-dim hover:text-accent hover:bg-accent-soft transition-all duration-150"
+            title="Switch to Batch Mode"
+          >
+            <Rows3 size={14} />
+          </button>
+          <button
+            type="submit"
+            className="sl-btn sl-btn-primary flex items-center gap-1 text-xs py-1.5 px-3 rounded font-medium shadow-sm transition-all duration-150"
+          >
+            Go <ArrowRight size={12} />
+          </button>
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={handlePasteButton}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono",
+              "text-text-dim hover:text-accent hover:bg-accent-soft",
+              "border border-border hover:border-border-accent",
+              "transition-all duration-150"
+            )}
+          >
+            <Clipboard size={12} />
+            Paste
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setValidationError(null);
+              setBatchMode(!batchMode);
+            }}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono",
+              "border transition-all duration-150",
+              batchMode
+                ? "text-accent bg-accent-soft border-border-accent"
+                : "text-text-dim hover:text-accent hover:bg-accent-soft border-border hover:border-border-accent"
+            )}
+          >
+            <Rows3 size={12} />
+            Batch
+          </button>
+        </>
+      )}
     </div>
   );
 
