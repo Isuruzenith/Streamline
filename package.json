@@ -36,8 +36,7 @@
     "test:coverage": "vitest run --coverage",
     "test:server": "bun test server/test/",
     "prepublishOnly": "bun run build",
-    "start": "bun server/index.js",
-    "postinstall": "bun scripts/provision.js"
+    "start": "bun server/index.js"
   },
   "files": [
     "bin/streamline.js",
