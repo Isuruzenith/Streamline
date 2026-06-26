@@ -1,17 +1,25 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 /**
  * Streamline CLI entry point.
  * Starts the server, provisions dependencies when needed, and opens the browser.
+ * Runs under Node.js and automatically installs Bun runtime if missing.
  */
 
 import { existsSync, readFileSync } from "fs";
-import { join } from "path";
+import { join, dirname } from "path";
 import { homedir } from "os";
+import { spawn, execSync } from "child_process";
+import { fileURLToPath } from "url";
+import net from "net";
+import readline from "readline";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const ENV_FILE = join(homedir(), ".streamline", "env.json");
 const PORT = parseInt(process.env.PORT || "7979", 10);
-const PACKAGE_ROOT = join(import.meta.dir, "..");
+const PACKAGE_ROOT = join(__dirname, "..");
 const PACKAGE_JSON = join(PACKAGE_ROOT, "package.json");
 const PROVISION_SCRIPT = join(PACKAGE_ROOT, "scripts", "provision.js");
 
@@ -21,6 +29,7 @@ const red = (s) => `\x1b[31m${s}\x1b[0m`;
 const dim = (s) => `\x1b[2m${s}\x1b[0m`;
 const cyan = (s) => `\x1b[36m${s}\x1b[0m`;
 const bold = (s) => `\x1b[1m${s}\x1b[0m`;
+const yellow = (s) => `\x1b[33m${s}\x1b[0m`;
 
 function getPackageVersion() {
   try {
@@ -45,17 +54,88 @@ Environment:
 `);
 }
 
-async function runProvision() {
-  console.log(`  ${cyan("->")} Provisioning yt-dlp and ffmpeg...`);
-  const provision = Bun.spawn([process.execPath, PROVISION_SCRIPT], {
-    cwd: PACKAGE_ROOT,
-    stdout: "inherit",
-    stderr: "inherit",
-  });
-  const exitCode = await provision.exited;
-  if (exitCode !== 0) {
-    throw new Error("Provisioning failed. Go to Settings > Environment and click Repair.");
+function getBunExecutable() {
+  // 1. Try running globally
+  try {
+    execSync("bun --version", { stdio: "ignore" });
+    return "bun";
+  } catch {}
+
+  // 2. Try default local installation paths
+  const home = homedir();
+  const localBun = join(
+    home,
+    ".bun",
+    "bin",
+    process.platform === "win32" ? "bun.exe" : "bun"
+  );
+
+  if (existsSync(localBun)) {
+    return localBun;
   }
+
+  return null;
+}
+
+function askQuestion(query) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    rl.question(query, (answer) => {
+      rl.close();
+      resolve(answer);
+    });
+  });
+}
+
+function installBun() {
+  console.log(`  ${cyan("->")} Installing Bun...`);
+  try {
+    if (process.platform === "win32") {
+      execSync('powershell -c "irm bun.sh/install.ps1 | iex"', { stdio: "inherit" });
+    } else {
+      execSync("curl -fsSL https://bun.sh/install | bash", { stdio: "inherit" });
+    }
+    console.log(`  ${green("✓")} Bun installed successfully!`);
+    return true;
+  } catch (err) {
+    console.error(red(`\n  x Failed to install Bun: ${err.message}`));
+    return false;
+  }
+}
+
+async function runProvision(bunBin) {
+  console.log(`  ${cyan("->")} Provisioning yt-dlp and ffmpeg...`);
+  const provision = spawn(bunBin, [PROVISION_SCRIPT], {
+    cwd: PACKAGE_ROOT,
+    stdio: "inherit",
+  });
+
+  return new Promise((resolve, reject) => {
+    provision.on("close", (exitCode) => {
+      if (exitCode !== 0) {
+        reject(
+          new Error("Provisioning failed. Go to Settings > Environment and click Repair.")
+        );
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+function isPortAvailable(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once("error", () => resolve(false));
+    server.once("listening", () => {
+      server.close(() => resolve(true));
+    });
+    server.listen(port, "127.0.0.1");
+  });
 }
 
 async function main() {
@@ -73,6 +153,30 @@ async function main() {
   console.log(`  ${cyan("*")} ${bold("Streamline")}`);
   console.log("");
 
+  // 1. Resolve Bun runtime
+  let bunBin = getBunExecutable();
+  if (!bunBin) {
+    console.log(`  ${yellow("!")} Bun runtime is required to run Streamline, but it was not found.`);
+    const answer = await askQuestion("  Would you like to install Bun now? (Y/n): ");
+    const norm = answer.trim().toLowerCase();
+    const wantsInstall = norm === "y" || norm === "yes" || norm === "";
+
+    if (wantsInstall) {
+      const ok = installBun();
+      if (ok) {
+        bunBin = getBunExecutable();
+      }
+    }
+
+    if (!bunBin) {
+      console.log(
+        red(`\n  x Bun is required to run Streamline. Please install it manually from https://bun.sh and try again.\n`)
+      );
+      process.exit(1);
+    }
+  }
+
+  // 2. Check provisioning state
   let needsProvision = false;
   if (existsSync(ENV_FILE)) {
     try {
@@ -95,20 +199,16 @@ async function main() {
   }
 
   if (needsProvision) {
-    await runProvision();
+    await runProvision(bunBin);
   }
 
-  // Check port availability
+  // 3. Check port availability
   let actualPort = PORT;
   for (let attempt = 0; attempt < 10; attempt++) {
-    try {
-      const testServer = Bun.serve({
-        port: actualPort,
-        fetch: () => new Response(""),
-      });
-      testServer.stop();
+    const available = await isPortAvailable(actualPort);
+    if (available) {
       break;
-    } catch {
+    } else {
       console.log(
         `  ${dim(">")} Port ${actualPort} is taken, trying ${actualPort + 1}...`
       );
@@ -116,17 +216,22 @@ async function main() {
     }
   }
 
-  // Set port for the server
-  process.env.PORT = String(actualPort);
-  process.env.NODE_ENV = "production";
-
-  // Start server
+  // 4. Start server using Bun
   console.log(`  ${cyan("->")} Starting server on port ${actualPort}...`);
   console.log("");
 
-  await import("../server/index.js");
+  const serverPath = join(PACKAGE_ROOT, "server", "index.js");
+  const server = spawn(bunBin, [serverPath], {
+    cwd: PACKAGE_ROOT,
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      PORT: String(actualPort),
+      NODE_ENV: "production",
+    },
+  });
 
-  // Open browser
+  // 5. Open browser
   const url = `http://localhost:${actualPort}`;
   try {
     const openCmd =
@@ -137,11 +242,15 @@ async function main() {
           : ["xdg-open", url];
 
     setTimeout(() => {
-      Bun.spawn(openCmd, { stdout: "ignore", stderr: "ignore" });
+      spawn(openCmd[0], openCmd.slice(1), { stdio: "ignore", detached: true }).unref();
     }, 1500);
   } catch {
     console.log(`  ${dim("Open in browser:")} ${url}`);
   }
+
+  server.on("close", (code) => {
+    process.exit(code || 0);
+  });
 }
 
 main().catch((err) => {
