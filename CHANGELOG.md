@@ -3,6 +3,13 @@
 All notable changes to Streamline are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.6.0](https://github.com/Isuruzenith/Streamline/compare/v1.5.0...v1.6.0) (2026-06-26)
+
+
+### Features
+
+* add CLI entry point to manage dependencies, provision environment, and launch server ([cc820dc](https://github.com/Isuruzenith/Streamline/commit/cc820dcd1f60cc15f896ccf9e6a63b5beb7135f8))
+
 ## [1.5.0](https://github.com/Isuruzenith/Streamline/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
